@@ -92,14 +92,15 @@ textarea::placeholder{color:var(--t3)}
 
 /* Library */
 .lib-list{display:flex;flex-direction:column;gap:8px}
-.lib-item{display:flex;align-items:center;justify-content:space-between;padding:14px;border:1px solid var(--border);border-radius:var(--rs);cursor:pointer;transition:all .15s;background:var(--card);gap:10px}
+.lib-item{display:flex;align-items:center;justify-content:space-between;padding:14px;border:1px solid var(--border);border-radius:var(--rs);transition:all .15s;background:var(--card);gap:10px}
 .lib-item:hover{border-color:var(--accent);box-shadow:0 2px 8px rgba(0,0,0,.06)}
-.lib-item:active{transform:scale(.98)}
 .lib-info{flex:1;min-width:0}
 .lib-name{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lib-meta{font-size:11px;color:var(--t3);margin-top:2px}
 .lib-stats{display:flex;gap:14px;font-size:11px;color:var(--t2);flex-shrink:0}
 .lib-stats .v{font-size:14px;font-weight:700}
+.lib-actions{display:flex;gap:6px;flex-shrink:0;align-items:center}
+.lib-actions .btn{white-space:nowrap;font-size:12px;padding:6px 12px}
 .lib-del{width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--card);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;color:var(--t3);flex-shrink:0}
 .lib-del:hover{border-color:var(--red);color:var(--red);background:var(--red-l)}
 .empty-state{text-align:center;padding:32px 16px;color:var(--t3);font-size:13px;line-height:1.8}
@@ -441,6 +442,19 @@ function loadExam(id) {
   toast('已加载：' + e.name, 'ok');
 }
 
+function loadWrongExam(id) {
+  const e = library.find(x => x.id === id); if (!e) return;
+  activeExam = { id: e.id, name: e.name, createdAt: e.createdAt, questions: e.questions, userAnswers: e.userAnswers || {}, isSubmitted: e.isSubmitted || {}, isCorrect: e.isCorrect || {}, cutWrong: e.cutWrong || {}, currentFilter: 'all', currentIndex: 0, reviewMode: 'wrong' };
+  const wrong = activeExam.questions.filter((_, i) => activeExam.isSubmitted[i] && !activeExam.isCorrect[i] && !activeExam.cutWrong[i]);
+  if (!wrong.length) { toast('没有错题！', 'ok'); return; }
+  filteredQuestions = wrong; currentIndex = 0; activeExam.currentIndex = 0;
+  switchTab('library');
+  showQuizView();
+  renderTypeTabs();
+  renderExam(); updateProgress();
+  toast('错题集 · ' + wrong.length + ' 道');
+}
+
 function renderLib() {
   const grid = document.getElementById('libGrid'), empty = document.getElementById('libEmpty');
   if (library.length === 0) { grid.innerHTML = ''; empty.style.display = 'block'; document.getElementById('libCount').textContent = ''; return; }
@@ -451,10 +465,23 @@ function renderLib() {
     const rate = s.done > 0 ? Math.round(s.correct / s.done * 100) : '--';
     const d = new Date(e.createdAt);
     const ds = d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
-    return `<div class="lib-item" onclick="loadExam('${e.id}')">
-      <div class="lib-info"><div class="lib-name">${escH(e.name)}</div><div class="lib-meta">${ds} · ${s.total}题</div></div>
+    // Calculate remaining wrong questions (submitted, wrong, not yet cut)
+    const cutWrong = e.cutWrong || {};
+    let wrongRemain = 0;
+    for (let i = 0; i < e.questions.length; i++) {
+      if (e.isSubmitted && e.isSubmitted[i] && e.isCorrect && !e.isCorrect[i] && !cutWrong[i]) wrongRemain++;
+    }
+    return `<div class="lib-item">
+      <div class="lib-info" onclick="loadExam('${e.id}')">
+        <div class="lib-name">${escH(e.name)}</div>
+        <div class="lib-meta">${ds} · ${s.total}题</div>
+      </div>
       <div class="lib-stats"><span><span class="v">${s.done}/${s.total}</span> 已答</span><span><span class="v" style="color:var(--green);">${s.correct}</span> 正确</span><span><span class="v">${typeof rate==='number'?rate+'%':rate}</span> 正确率</span></div>
-      <button class="lib-del" onclick="event.stopPropagation();deleteExam('${e.id}')">✕</button></div>`;
+      <div class="lib-actions">
+        <button class="btn btn-p btn-xs" onclick="loadExam('${e.id}')">打开试卷</button>
+        <button class="btn btn-s btn-xs" onclick="loadWrongExam('${e.id}')" style="${wrongRemain > 0 ? 'border-color:var(--red);color:var(--red);' : ''}">错题集${wrongRemain > 0 ? ' · ' + wrongRemain : ''}</button>
+        <button class="lib-del" onclick="event.stopPropagation();deleteExam('${e.id}')">✕</button>
+      </div></div>`;
   }).join('');
 }
 
