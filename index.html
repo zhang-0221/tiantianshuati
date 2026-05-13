@@ -530,18 +530,20 @@ async function generateExam() {
   status.innerHTML = '<div class="loading"><div class="spinner"></div>连接 DeepSeek，最长等待 2 分钟……</div>';
 
   try {
-    // More aggressive truncation: keep more but compress very large inputs
+    // Truncate only when extremely long; keep as much material as possible
     let truncated = material;
-    if (material.length > 12000) {
-      // Split into chunks, take first 8000 + last 2000 chars to capture both overview and details
-      truncated = material.substring(0, 8000) + '\n\n……（中间部分已省略）……\n\n' + material.substring(material.length - 2000);
+    if (material.length > 20000) {
+      truncated = material.substring(0, 12000) + '\n\n……（中间部分已省略）……\n\n' + material.substring(material.length - 6000);
     }
+
+    // Dynamic question count based on material length
+    const targetCount = material.length < 1000 ? 8 : material.length < 5000 ? 15 : material.length < 10000 ? 20 : 30;
 
     status.innerHTML = '<div class="loading"><div class="spinner"></div>AI 正在分析资料并生成题目……</div>';
     const resp = await fetchTimeout('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
-      body: JSON.stringify({ model: 'deepseek-chat', messages: [{ role: 'system', content: SYS_PROMPT }, { role: 'user', content: '请根据以下学习资料生成考试题目：\n\n' + truncated }], temperature: 0.7, max_tokens: 8192 })
+      body: JSON.stringify({ model: 'deepseek-chat', messages: [{ role: 'system', content: SYS_PROMPT }, { role: 'user', content: '请根据以下学习资料生成约' + targetCount + '道考试题目，覆盖资料的不同知识点：\n\n' + truncated }], temperature: 0.7, max_tokens: 8192 })
     }, 120000);
 
     status.innerHTML = '<div class="loading"><div class="spinner"></div>收到回复，解析题目中……</div>';
@@ -663,9 +665,6 @@ function repairJSON(s) {
 }
 
 const SYS_PROMPT = `你是专业考试出题系统。根据用户提供的学习资料生成高质量题目。
-
-## 题量
-根据资料内容丰富度生成8-15道题，不要超过15道。
 
 ## 题型分配
 - "single" 单选题（约50%）：概念辨析。4选项，1正确答案。
