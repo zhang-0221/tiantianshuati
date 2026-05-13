@@ -527,73 +527,32 @@ async function generateExam() {
 
   const btn = document.getElementById('genBtn'), status = document.getElementById('genStatus');
   btn.disabled = true; btn.textContent = 'AI 生成中……';
-  status.innerHTML = '<div class="loading"><div class="spinner"></div>连接 DeepSeek，最长等待 2 分钟……</div>';
+  status.innerHTML = '<div class="loading"><div class="spinner"></div>连接 DeepSeek……</div>';
 
   try {
-    // Truncate only when extremely long; keep as much material as possible
-    let truncated = material;
-    if (material.length > 20000) {
-      truncated = material.substring(0, 12000) + '\n\n……（中间部分已省略）……\n\n' + material.substring(material.length - 6000);
-    }
+    let allQuestions = [];
 
-    // Dynamic question count based on material length
-    const targetCount = material.length < 1000 ? 8 : material.length < 5000 ? 15 : material.length < 10000 ? 20 : 30;
+    // For materials > 8000 chars, split into chunks and process in batches
+    if (material.length > 8000) {
+      const chunks = splitIntoChunks(material, 5000);
+      status.innerHTML = '<div class="loading"><div class="spinner"></div>资料较长，分 ' + chunks.length + ' 段处理（共约' + material.length + '字）……</div>';
 
-    status.innerHTML = '<div class="loading"><div class="spinner"></div>AI 正在分析资料并生成题目……</div>';
-    const resp = await fetchTimeout('https://api.deepseek.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
-      body: JSON.stringify({ model: 'deepseek-chat', messages: [{ role: 'system', content: SYS_PROMPT }, { role: 'user', content: '请根据以下学习资料生成约' + targetCount + '道考试题目，覆盖资料的不同知识点：\n\n' + truncated }], temperature: 0.7, max_tokens: 8192 })
-    }, 120000);
+      for (let ci = 0; ci < chunks.length; ci++) {
+        status.innerHTML = '<div class="loading"><div class="spinner"></div>AI 正在出题：第 ' + (ci+1) + '/' + chunks.length + ' 段……</div>';
 
-    status.innerHTML = '<div class="loading"><div class="spinner"></div>收到回复，解析题目中……</div>';
-
-    if (!resp.ok) {
-      let em = ''; try { em = (await resp.json()).error?.message || ''; } catch {}
-      if (resp.status === 401) throw new Error('API Key 无效（401）');
-      if (resp.status === 402) throw new Error('账户余额不足（402）');
-      if (resp.status === 429) throw new Error('请求频繁（429），稍后重试');
-      throw new Error(em || 'API 错误 (HTTP ' + resp.status + ')');
-    }
-
-    const data = await resp.json();
-    const content = data.choices?.[0]?.message?.content;
-    if (!content || !content.trim()) throw new Error('API 返回空内容');
-
-    let parsed = null; const trimmed = content.trim();
-
-    // Try 1: direct JSON parse
-    try { parsed = JSON.parse(trimmed); } catch {}
-
-    // Try 2: extract from markdown code blocks
-    if (!parsed) {
-      const codeBlock = trimmed.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
-      if (codeBlock) try { parsed = JSON.parse(codeBlock[1]); } catch {}
-    }
-
-    // Try 3: extract outermost { } with questions array (non-greedy first, then greedy with repair)
-    if (!parsed) {
-      const m = trimmed.match(/\{[\s\S]*"questions"[\s\S]*\}/);
-      if (m) {
-        try { parsed = JSON.parse(m[0]); } catch {
-          // Try to repair truncated JSON
-          const repaired = repairJSON(m[0]);
-          if (repaired) try { parsed = JSON.parse(repaired); } catch {}
-        }
+        const chunkQuestions = await callAI(chunks[ci], '请根据以下学习资料生成考试题目，尽量覆盖本段所有知识点：\n\n' + chunks[ci]);
+        allQuestions = allQuestions.concat(chunkQuestions);
       }
+    } else {
+      // Single call for smaller materials
+      status.innerHTML = '<div class="loading"><div class="spinner"></div>AI 正在分析资料并生成题目……</div>';
+      allQuestions = await callAI(material, '请根据以下学习资料生成考试题目，覆盖资料中所有知识点：\n\n' + material);
     }
 
-    // Try 4: repair entire trimmed content
-    if (!parsed) {
-      const repaired = repairJSON(trimmed);
-      if (repaired) try { parsed = JSON.parse(repaired); } catch {}
-    }
+    if (allQuestions.length === 0) throw new Error('未生成有效题目');
 
-    if (!parsed || !parsed.questions || !Array.isArray(parsed.questions) || parsed.questions.length === 0) {
-      throw new Error('JSON 解析失败，请重试（可能是资料过长导致AI输出被截断，建议缩短资料后重试）');
-    }
-
-    const questions = parsed.questions.map((q, i) => ({
+    // Re-index questions
+    const questions = allQuestions.map((q, i) => ({
       id: i, type: q.type || 'single', question: q.question || '', options: q.options || [],
       correctIndex: q.correctIndex, correctIndexes: q.correctIndexes || [],
       referenceAnswer: q.referenceAnswer || '', explanation: q.explanation || '',
@@ -612,12 +571,89 @@ async function generateExam() {
 
   } catch (err) {
     let msg = err.message;
-    if (msg === 'TIMEOUT') msg = '请求超时（2分钟）。请检查：\n1. 网络能否访问 api.deepseek.com\n2. 是否需要开代理/VPN\n3. 资料是否过长';
+    if (msg === 'TIMEOUT') msg = '请求超时。请检查：\n1. 网络能否访问 api.deepseek.com\n2. 是否需要开代理/VPN\n3. 资料是否过长';
     if (err.name === 'TypeError' && msg.includes('fetch')) msg = '网络连接失败。请检查网络或尝试开代理';
     status.innerHTML = '<div class="msg err">' + escH(msg).replace(/\n/g, '<br>') + '</div>';
     toast('生成失败', 'err');
   }
   btn.disabled = false; btn.textContent = 'AI 生成试卷';
+}
+
+// Split text into chunks at paragraph boundaries, each ~targetSize chars
+function splitIntoChunks(text, targetSize) {
+  const paragraphs = text.split(/\n{2,}/);
+  const chunks = [];
+  let current = '';
+  for (const p of paragraphs) {
+    if (current && current.length + p.length > targetSize && current.length > targetSize * 0.5) {
+      chunks.push(current.trim());
+      current = p;
+    } else {
+      current += (current ? '\n\n' : '') + p;
+    }
+  }
+  if (current.trim()) chunks.push(current.trim());
+  return chunks.length > 0 ? chunks : [text];
+}
+
+// Call DeepSeek API and parse questions from response
+async function callAI(materialChunk, userMsg) {
+  const resp = await fetchTimeout('https://api.deepseek.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+    body: JSON.stringify({ model: 'deepseek-chat', messages: [{ role: 'system', content: SYS_PROMPT }, { role: 'user', content: userMsg }], temperature: 0.7, max_tokens: 8192 })
+  }, 120000);
+
+  if (!resp.ok) {
+    let em = ''; try { em = (await resp.json()).error?.message || ''; } catch {}
+    if (resp.status === 401) throw new Error('API Key 无效（401）');
+    if (resp.status === 402) throw new Error('账户余额不足（402）');
+    if (resp.status === 429) throw new Error('请求频繁（429），稍后重试');
+    throw new Error(em || 'API 错误 (HTTP ' + resp.status + ')');
+  }
+
+  const data = await resp.json();
+  const content = data.choices?.[0]?.message?.content;
+  if (!content || !content.trim()) throw new Error('API 返回空内容');
+
+  return parseQuestionsFromContent(content.trim());
+}
+
+// Extract questions array from AI response (robust multi-level parsing)
+function parseQuestionsFromContent(trimmed) {
+  let parsed = null;
+
+  // Try 1: direct JSON parse
+  try { parsed = JSON.parse(trimmed); } catch {}
+
+  // Try 2: extract from markdown code blocks
+  if (!parsed) {
+    const codeBlock = trimmed.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+    if (codeBlock) try { parsed = JSON.parse(codeBlock[1]); } catch {}
+  }
+
+  // Try 3: extract outermost { } with questions array + repair
+  if (!parsed) {
+    const m = trimmed.match(/\{[\s\S]*"questions"[\s\S]*\}/);
+    if (m) {
+      try { parsed = JSON.parse(m[0]); } catch {
+        const repaired = repairJSON(m[0]);
+        if (repaired) try { parsed = JSON.parse(repaired); } catch {}
+      }
+    }
+  }
+
+  // Try 4: repair entire content
+  if (!parsed) {
+    const repaired = repairJSON(trimmed);
+    if (repaired) try { parsed = JSON.parse(repaired); } catch {}
+  }
+
+  if (!parsed || !parsed.questions || !Array.isArray(parsed.questions)) {
+    throw new Error('JSON 解析失败，请重试');
+  }
+
+  return parsed.questions.filter(q => q.question && q.question.trim());
 }
 
 // Repair truncated JSON: close unclosed strings, brackets, braces
