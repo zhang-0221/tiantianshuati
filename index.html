@@ -418,6 +418,7 @@ function saveExam(name) {
     id: activeExam.id, name: name || activeExam.name, createdAt: activeExam.createdAt,
     questions: activeExam.questions, userAnswers: activeExam.userAnswers,
     isSubmitted: activeExam.isSubmitted, isCorrect: activeExam.isCorrect,
+    cutWrong: activeExam.cutWrong,
   };
   data.summary = { total: data.questions.length, done: Object.keys(data.isSubmitted).length, correct: Object.values(data.isCorrect).filter(v => v === true).length };
   if (idx >= 0) library[idx] = data; else library.push(data);
@@ -433,7 +434,7 @@ function deleteExam(id) {
 
 function loadExam(id) {
   const e = library.find(x => x.id === id); if (!e) return;
-  activeExam = { id: e.id, name: e.name, createdAt: e.createdAt, questions: e.questions, userAnswers: e.userAnswers || {}, isSubmitted: e.isSubmitted || {}, isCorrect: e.isCorrect || {}, currentFilter: 'all', currentIndex: 0 };
+  activeExam = { id: e.id, name: e.name, createdAt: e.createdAt, questions: e.questions, userAnswers: e.userAnswers || {}, isSubmitted: e.isSubmitted || {}, isCorrect: e.isCorrect || {}, cutWrong: e.cutWrong || {}, currentFilter: 'all', currentIndex: 0, reviewMode: null };
   switchTab('library');
   showQuizView();
   applyFilter('all');
@@ -471,7 +472,7 @@ function showQuizView() {
 }
 
 function backToLib() {
-  if (activeExam) saveExam(activeExam.name);
+  if (activeExam) { activeExam.reviewMode = null; saveExam(activeExam.name); }
   showLibView();
 }
 
@@ -561,7 +562,7 @@ async function generateExam() {
     const now = new Date();
     const name = '试卷 · ' + now.getFullYear()+'/'+(now.getMonth()+1)+'/'+now.getDate()+' '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
 
-    activeExam = { id: 'ex_' + Date.now(), name, createdAt: now.toISOString(), questions, userAnswers: {}, isSubmitted: {}, isCorrect: {}, currentFilter: 'all', currentIndex: 0 };
+    activeExam = { id: 'ex_' + Date.now(), name, createdAt: now.toISOString(), questions, userAnswers: {}, isSubmitted: {}, isCorrect: {}, cutWrong: {}, currentFilter: 'all', currentIndex: 0, reviewMode: null };
     switchTab('library');
     showQuizView();
     applyFilter('all');
@@ -702,6 +703,11 @@ function repairJSON(s) {
 
 const SYS_PROMPT = `你是专业考试出题系统。根据用户提供的学习资料生成高质量题目。
 
+## 铁律（最重要）
+- 题目必须100%基于用户提供的资料，禁止编造任何资料中不存在的内容
+- 如果资料信息不足以支撑某道题，宁可不生成那道题
+- 题干、选项、解析中涉及的知识点必须能在资料原文中找到依据
+
 ## 题型分配
 - "single" 单选题（约50%）：概念辨析。4选项，1正确答案。
 - "multiple" 多选题（约25%）：特征列举。4-6选项，2-4正确答案。
@@ -709,12 +715,10 @@ const SYS_PROMPT = `你是专业考试出题系统。根据用户提供的学习
 - "essay" 论述题（约10%）：综合分析。提供参考要点。
 
 ## 要求
-1. 题目100%基于资料，不编造
-2. 正确选项准确，错误选项有迷惑性但明确错误
-3. 解析简短（1-2句），不要写大段文字
-4. question不包含选项，选项独立在options数组
-5. 简答/论述的referenceAnswer简洁完整
-6. 只输出JSON，不要任何解释或前言
+1. 正确选项准确，错误选项有迷惑性但明确错误
+2. 解析简短（1-2句），引用原文
+3. question不包含选项，选项独立在options数组
+4. 只输出JSON，不要任何解释或前言
 
 ## JSON格式（严格）
 {"questions":[{"type":"single","question":"...","options":["A","B","C","D"],"correctIndex":0,"explanation":"简短的解析"},{"type":"multiple","question":"...","options":["A","B","C","D","E"],"correctIndexes":[0,2],"explanation":"简短的解析"},{"type":"short","question":"...","referenceAnswer":"...","explanation":"简短的解析"},{"type":"essay","question":"...","referenceAnswer":"...","explanation":"简短的解析"}]}`;
@@ -743,6 +747,7 @@ function renderQuizTab() {
         <button class="btn btn-s" id="prevBtn" onclick="prevQ()">← 上一题</button>
         <button class="btn btn-s" id="nextBtn" onclick="nextQ()">下一题 →</button>
       </div>
+      <div id="cutBtnArea" style="text-align:center;margin-top:10px;display:none;"></div>
     </div>
     <div style="text-align:center;margin-top:8px;">
       <button class="btn btn-p btn-sm" id="finishBtn" onclick="showResults()" style="display:none;">提交试卷</button>
@@ -793,6 +798,14 @@ function renderExam() {
   document.getElementById('prevBtn').disabled = currentIndex === 0;
   document.getElementById('nextBtn').disabled = currentIndex >= filteredQuestions.length - 1;
   document.getElementById('finishBtn').style.display = activeExam.questions.every((_, i) => activeExam.isSubmitted[i]) ? '' : 'none';
+  // Show 斩题 button in wrong-review mode
+  const cutArea = document.getElementById('cutBtnArea');
+  if (cutArea && activeExam.reviewMode === 'wrong') {
+    cutArea.style.display = 'block';
+    cutArea.innerHTML = '<button class="btn btn-s btn-sm" onclick="cutWrongQ(' + oi + ')" style="border-color:var(--green);color:var(--green);">✓ 斩题 · 已掌握</button>';
+  } else if (cutArea) {
+    cutArea.style.display = 'none';
+  }
   saveExam(activeExam.name);
 }
 
@@ -883,9 +896,12 @@ document.addEventListener('keydown', function(e) {
 // ==================== RESULTS ====================
 function showResults() {
   if (!activeExam) return;
+  activeExam.reviewMode = null;
   const t = activeExam.questions.length;
-  const c = Object.values(activeExam.isCorrect).filter(v => v === true).length;
   const w = Object.values(activeExam.isCorrect).filter(v => v === false).length;
+  const cut = Object.values(activeExam.cutWrong || {}).filter(v => v === true).length;
+  const wRemain = w - cut;
+  const c = t - w;
   const rate = t ? Math.round(c / t * 100) : 0;
 
   document.getElementById('quizView').innerHTML = `
@@ -899,11 +915,12 @@ function showResults() {
       <div class="result-grid">
         <div class="res-item"><div class="big">${t}</div><div class="lbl">总题</div></div>
         <div class="res-item"><div class="big" style="color:var(--green);">${c}</div><div class="lbl">正确</div></div>
-        <div class="res-item"><div class="big" style="color:var(--red);">${w}</div><div class="lbl">错误</div></div>
+        <div class="res-item"><div class="big" style="color:var(--red);">${wRemain}</div><div class="lbl">剩余错题</div></div>
         <div class="res-item"><div class="big" style="color:var(--accent);">${rate}%</div><div class="lbl">正确率</div></div>
       </div>
+      ${cut > 0 ? `<div style="font-size:11px;color:var(--t3);margin-bottom:12px;">已斩 ${cut} 道错题</div>` : ''}
       <div class="act-row">
-        <button class="btn btn-s btn-sm" onclick="reviewWrong()">错题回顾</button>
+        <button class="btn btn-s btn-sm" onclick="reviewWrong()">${wRemain > 0 ? '错题回顾 · ' + wRemain : '错题回顾'}</button>
         <button class="btn btn-s btn-sm" onclick="reviewAll()">全部回顾</button>
         <button class="btn btn-s btn-sm" onclick="backToLib()">返回题库</button>
       </div>
@@ -913,16 +930,36 @@ function showResults() {
 
 function reviewWrong() {
   if (!activeExam) return;
-  const wrong = activeExam.questions.filter((_, i) => activeExam.isSubmitted[i] && !activeExam.isCorrect[i]);
-  if (!wrong.length) { toast('没有错题！', 'ok'); return; }
+  const wrong = activeExam.questions.filter((_, i) => activeExam.isSubmitted[i] && !activeExam.isCorrect[i] && !activeExam.cutWrong[i]);
+  if (!wrong.length) { toast('没有错题了！', 'ok'); return; }
   filteredQuestions = wrong; currentIndex = 0; activeExam.currentFilter = 'all'; activeExam.currentIndex = 0;
+  activeExam.reviewMode = 'wrong';
   renderQuizTab();
 }
 
 function reviewAll() {
   if (!activeExam) return;
   filteredQuestions = [...activeExam.questions]; currentIndex = 0; activeExam.currentFilter = 'all'; activeExam.currentIndex = 0;
+  activeExam.reviewMode = 'all';
   renderQuizTab();
+}
+
+function cutWrongQ(oi) {
+  if (!activeExam) return;
+  activeExam.cutWrong[oi] = true;
+  // Remove current question from filtered list
+  const oldLen = filteredQuestions.length;
+  filteredQuestions = filteredQuestions.filter(q => q.id !== oi);
+  if (filteredQuestions.length === 0) {
+    toast('错题已全部斩完！', 'ok');
+    showResults();
+    return;
+  }
+  if (currentIndex >= filteredQuestions.length) currentIndex = filteredQuestions.length - 1;
+  activeExam.currentIndex = currentIndex;
+  renderExam(); updateProgress();
+  saveExam(activeExam.name);
+  toast('已斩题 · 剩余 ' + filteredQuestions.length + ' 道错题');
 }
 
 // ==================== AI CHAT ====================
