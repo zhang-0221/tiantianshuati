@@ -156,6 +156,16 @@ textarea::placeholder{color:var(--t3)}
 .quiz-empty{text-align:center;padding:48px 20px;color:var(--t3)}
 .quiz-empty .empty-icon{font-size:40px;margin-bottom:12px}
 
+/* Answer Sheet */
+.answer-sheet{display:none;background:var(--card);border-radius:var(--r);padding:14px;margin-bottom:12px;box-shadow:var(--shadow)}
+.answer-sheet.show{display:block}
+.answer-sheet-grid{display:flex;flex-wrap:wrap;gap:6px}
+.answer-sheet-item{width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;cursor:pointer;transition:all .12s;border:1px solid var(--border);background:var(--bg);color:var(--t2)}
+.answer-sheet-item:hover{transform:scale(1.08);box-shadow:0 2px 6px rgba(0,0,0,.1)}
+.answer-sheet-item.current{border-color:var(--accent);background:var(--accent-l);color:var(--accent);box-shadow:0 0 0 2px rgba(37,99,235,.2)}
+.answer-sheet-item.correct{border-color:var(--green);background:var(--green-l);color:var(--green)}
+.answer-sheet-item.wrong{border-color:var(--red);background:var(--red-l);color:var(--red)}
+
 /* Results */
 .result-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:16px 0}
 .res-item{text-align:center;padding:12px 4px;border-radius:var(--rs);border:1px solid var(--border);background:var(--card)}
@@ -757,6 +767,7 @@ function renderQuizTab() {
   container.innerHTML = `
     <div class="quiz-header-bar">
       <button class="btn btn-s btn-sm" onclick="backToLib()">← 返回题库</button>
+      <button class="btn btn-s btn-sm" id="sheetToggle" onclick="toggleAnswerSheet()">📋 答题卡</button>
     </div>
     <div class="type-tabs" id="typeTabs"></div>
     <div class="prog-row">
@@ -766,6 +777,7 @@ function renderQuizTab() {
       <div class="prog-item"><div class="pv" id="pWrong" style="color:var(--red);">0</div><div class="pl">错误</div></div>
     </div>
     <div class="prog-track"><div class="prog-bar g" id="barG" style="width:0%"></div><div class="prog-bar r" id="barR" style="width:0%"></div></div>
+    <div class="answer-sheet" id="answerSheet"></div>
     <div class="card" id="examCard">
       <div class="exam-hd"><span class="idx" id="qIdx">第 1/1 题</span><span class="type-tag" id="qTag">单选题</span></div>
       <div class="q-text" id="qText"></div>
@@ -833,6 +845,7 @@ function renderExam() {
   } else if (cutArea) {
     cutArea.style.display = 'none';
   }
+  renderAnswerSheet();
   saveExam(activeExam.name);
 }
 
@@ -911,8 +924,33 @@ function updateProgress() {
   ['barG','barR'].forEach(id => { const el = document.getElementById(id); if (el) el.style.width = (t ? ({barG:c,barR:w}[id]/t*100) : 0) + '%'; });
 }
 
-function prevQ() { if (currentIndex > 0) { currentIndex--; activeExam.currentIndex = currentIndex; renderExam(); } }
-function nextQ() { if (currentIndex < filteredQuestions.length - 1) { currentIndex++; activeExam.currentIndex = currentIndex; renderExam(); } }
+function prevQ() { if (currentIndex > 0) { currentIndex--; activeExam.currentIndex = currentIndex; renderExam(); renderAnswerSheet(); } }
+function nextQ() { if (currentIndex < filteredQuestions.length - 1) { currentIndex++; activeExam.currentIndex = currentIndex; renderExam(); renderAnswerSheet(); } }
+function jumpTo(idx) { currentIndex = idx; activeExam.currentIndex = currentIndex; renderExam(); renderAnswerSheet(); }
+
+function toggleAnswerSheet() {
+  const sheet = document.getElementById('answerSheet');
+  const btn = document.getElementById('sheetToggle');
+  const isOpen = sheet.classList.contains('show');
+  sheet.classList.toggle('show', !isOpen);
+  if (!isOpen) renderAnswerSheet();
+  if (btn) btn.textContent = isOpen ? '📋 答题卡' : '📋 收起';
+}
+
+function renderAnswerSheet() {
+  const sheet = document.getElementById('answerSheet');
+  if (!sheet || !sheet.classList.contains('show')) return;
+  sheet.innerHTML = '<div class="answer-sheet-grid">' + filteredQuestions.map((q, idx) => {
+    const oi = q.id;
+    let cls = 'answer-sheet-item';
+    if (idx === currentIndex) cls += ' current';
+    if (activeExam.isCorrect[oi] === true) cls += ' correct';
+    else if (activeExam.isCorrect[oi] === false) cls += ' wrong';
+    // Map to display number (original index + 1)
+    const displayNum = oi + 1;
+    return '<div class="' + cls + '" onclick="jumpTo(' + idx + ')" title="第' + displayNum + '题">' + displayNum + '</div>';
+  }).join('') + '</div>';
+}
 document.addEventListener('keydown', function(e) {
   if (!document.getElementById('quizView') || document.getElementById('quizView').style.display === 'none') return;
   if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
