@@ -510,9 +510,11 @@ function saveLib() { localStorage.setItem(LS_LIB, JSON.stringify(library)); }
 function saveExam(name) {
   if (!activeExam || !activeExam.questions.length) return;
   const idx = library.findIndex(e => e.id === activeExam.id);
+  // Always preserve original question order from library
+  const origQuestions = idx >= 0 ? library[idx].questions : activeExam.questions;
   const data = {
     id: activeExam.id, name: name || activeExam.name, createdAt: activeExam.createdAt,
-    questions: activeExam.questions, userAnswers: activeExam.userAnswers,
+    questions: origQuestions, userAnswers: activeExam.userAnswers,
     isSubmitted: activeExam.isSubmitted, isCorrect: activeExam.isCorrect,
     cutWrong: activeExam.cutWrong,
   };
@@ -555,11 +557,11 @@ function showExamDetail(id) {
   const e = library.find(x => x.id === id); if (!e) return;
   detailExamId = id; detailMode = null;
   const s = e.summary || { total: e.questions.length, done: 0, correct: 0 };
-  const w = (s.done || 0) - (s.correct || 0);
   const cutWrong = e.cutWrong || {};
+  const submitted = e.isSubmitted || {}, correct = e.isCorrect || {};
   let wrongRemain = 0;
-  for (let i = 0; i < e.questions.length; i++) {
-    if (e.isSubmitted && e.isSubmitted[i] && e.isCorrect && !e.isCorrect[i] && !cutWrong[i]) wrongRemain++;
+  for (const q of e.questions) {
+    if (submitted[q.id] && !correct[q.id] && !cutWrong[q.id]) wrongRemain++;
   }
   const d = new Date(e.createdAt);
   const ds = d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate();
@@ -596,13 +598,13 @@ function showExamDetail(id) {
         <div class="mode-hint">打乱题目顺序</div>
       </div>
     </div>
-    ${wrongRemain > 0 ? `<div class="mode-row">
-      <div class="mode-btn wrong-mode" onclick="startPractice('${e.id}', 'wrong', false)" style="flex:0 0 100%;">
+    <div class="mode-row">
+      <div class="mode-btn wrong-mode" onclick="startPractice('${e.id}', 'wrong', false)" style="flex:0 0 100%;${wrongRemain === 0 ? 'opacity:0.5;pointer-events:none;' : ''}">
         <div class="mode-icon">📝</div>
         <div class="mode-label">错题集 · ${wrongRemain}</div>
-        <div class="mode-hint">只看答错的题，可斩题</div>
+        <div class="mode-hint">${wrongRemain > 0 ? '只看答错的题，可斩题' : '暂无错题，答题后自动更新'}</div>
       </div>
-    </div>` : ''}
+    </div>
     <div id="resumeRow"></div>`;
 
   if (hasProgress) {
@@ -651,20 +653,13 @@ function renameExam(id, newName) {
 // ==================== START PRACTICE ====================
 function startPractice(id, mode, reset) {
   const e = library.find(x => x.id === id); if (!e) return;
-  let questions = [...e.questions];
   let reviewMode = null;
-
-  if (mode === 'random') {
-    // Fisher-Yates shuffle
-    for (let i = questions.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [questions[i], questions[j]] = [questions[j], questions[i]];
-    }
-  }
+  // Keep original questions from library (never shuffle the stored order)
+  let questions = [...e.questions];
 
   if (mode === 'wrong') {
-    const cutWrong = e.cutWrong || {};
-    questions = questions.filter((_, i) => e.isSubmitted && e.isSubmitted[i] && e.isCorrect && !e.isCorrect[i] && !cutWrong[i]);
+    const submitted = e.isSubmitted || {}, correct = e.isCorrect || {}, cut = e.cutWrong || {};
+    questions = questions.filter(q => submitted[q.id] && !correct[q.id] && !cut[q.id]);
     if (!questions.length) { toast('没有错题！', 'ok'); return; }
     reviewMode = 'wrong';
   }
@@ -682,6 +677,18 @@ function startPractice(id, mode, reset) {
   document.getElementById('quizView').style.display = 'block';
   renderQuizTab();
   applyFilter('all');
+
+  // Random mode: shuffle filteredQuestions without touching stored order
+  if (mode === 'random') {
+    for (let i = filteredQuestions.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [filteredQuestions[i], filteredQuestions[j]] = [filteredQuestions[j], filteredQuestions[i]];
+    }
+    currentIndex = 0; activeExam.currentIndex = 0;
+    renderTypeTabs();
+    if (filteredQuestions.length > 0) { renderExam(); updateProgress(); }
+  }
+
   if (reset) saveExam(e.name);
   toast((reset ? '重新开始 · ' : '') + ({sequential:'顺序练习',random:'随机练习',wrong:'错题集'}[mode]), 'ok');
 }
