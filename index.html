@@ -171,6 +171,36 @@ textarea::placeholder{color:var(--t3)}
 .answer-sheet-item.correct{border-color:var(--green);background:var(--green-l);color:var(--green)}
 .answer-sheet-item.wrong{border-color:var(--red);background:var(--red-l);color:var(--red)}
 
+/* Exam Detail */
+.detail-header{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.detail-header .btn-back{flex-shrink:0}
+.detail-name-wrap{flex:1;min-width:0}
+.detail-name{font-size:18px;font-weight:700;border:none;background:none;font-family:var(--font);color:var(--text);width:100%;padding:4px 0;outline:none;border-bottom:2px solid transparent;transition:border .15s}
+.detail-name:hover,.detail-name:focus{border-bottom-color:var(--accent)}
+.detail-meta{font-size:12px;color:var(--t3);margin-top:4px}
+.detail-stats{display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap}
+.detail-stat{text-align:center;padding:10px 16px;border-radius:var(--rs);background:var(--card);box-shadow:var(--shadow);min-width:60px}
+.detail-stat .dsv{font-size:20px;font-weight:700}
+.detail-stat .dsl{font-size:10px;color:var(--t3);margin-top:2px}
+.mode-row{display:flex;gap:10px;margin-bottom:10px}
+.mode-btn{flex:1;padding:16px 12px;border:1px solid var(--border);border-radius:var(--r);background:var(--card);cursor:pointer;text-align:center;transition:all .15s;font-family:var(--font)}
+.mode-btn:hover{border-color:var(--accent);box-shadow:0 2px 12px rgba(37,99,235,.08)}
+.mode-btn .mode-icon{font-size:28px;margin-bottom:4px}
+.mode-btn .mode-label{font-size:14px;font-weight:700}
+.mode-btn .mode-hint{font-size:11px;color:var(--t3);margin-top:2px}
+.mode-btn.wrong-mode{border-color:var(--red-l);background:var(--red-l)}
+.mode-btn.wrong-mode:hover{border-color:var(--red);box-shadow:0 2px 12px rgba(197,34,31,.1)}
+.mode-btn.wrong-mode .mode-label{color:var(--red)}
+.resume-row{display:flex;gap:8px;margin-top:4px}
+.resume-row .btn{flex:1}
+
+/* Toggle Switch */
+.toggle-wrap{display:inline-flex;align-items:center;gap:8px;font-size:11px;color:var(--t3);cursor:pointer;user-select:none}
+.toggle-switch{width:36px;height:20px;border-radius:10px;background:var(--border);cursor:pointer;position:relative;transition:background .2s;flex-shrink:0}
+.toggle-switch.on{background:var(--accent)}
+.toggle-switch::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .2s;box-shadow:0 1px 2px rgba(0,0,0,.1)}
+.toggle-switch.on::after{left:18px}
+
 /* Results */
 .result-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:16px 0}
 .res-item{text-align:center;padding:12px 4px;border-radius:var(--rs);border:1px solid var(--border);background:var(--card)}
@@ -362,12 +392,12 @@ textarea::placeholder{color:var(--t3)}
     <div class="tab-content" id="tabLibrary">
       <!-- 子视图：题库列表 -->
       <div id="libView">
-        <div class="card">
-          <div class="card-hd">📚 我的题库 <span class="card-tag" id="libCount"></span></div>
-          <div class="lib-list" id="libGrid"></div>
-          <div class="empty-state" id="libEmpty">还没有试卷，导入资料后生成一份吧</div>
-        </div>
+        <div class="card-hd" style="margin-bottom:12px;">📚 我的题库 <span class="card-tag" id="libCount"></span></div>
+        <div class="lib-list" id="libGrid"></div>
+        <div class="empty-state" id="libEmpty">还没有试卷，导入资料后生成一份吧</div>
       </div>
+      <!-- 子视图：试卷详情 -->
+      <div id="detailView" style="display:none;"></div>
       <!-- 子视图：刷题 -->
       <div id="quizView" style="display:none;"></div>
     </div>
@@ -383,18 +413,6 @@ textarea::placeholder{color:var(--t3)}
     <div class="modal-btns">
       <button class="btn btn-s btn-sm" onclick="closeSettings()">取消</button>
       <button class="btn btn-p btn-sm" onclick="saveApiKey()">保存</button>
-    </div>
-  </div>
-</div>
-
-<!-- Resume Modal -->
-<div class="modal-overlay hidden" id="resumeModal">
-  <div class="modal">
-    <h3>这份试卷有作答记录</h3>
-    <p>你想继续上次的进度，还是重新开始？</p>
-    <div class="modal-btns">
-      <button class="btn btn-s btn-sm" onclick="startExam(library.find(e=>e.id===document.getElementById('resumeModal')._examId), true)">重新开始</button>
-      <button class="btn btn-p btn-sm" onclick="startExam(library.find(e=>e.id===document.getElementById('resumeModal')._examId), false)">继续做题</button>
     </div>
   </div>
 </div>
@@ -442,6 +460,7 @@ let library = [];
 let activeExam = null;
 let filteredQuestions = [];
 let currentIndex = 0;
+let autoAdvance = true;
 
 // ==================== TOAST ====================
 function toast(msg, type) {
@@ -509,102 +528,182 @@ function deleteExam(id) {
   if (activeExam && activeExam.id === id) { activeExam = null; showLibView(); }
 }
 
-function loadExam(id, reset) {
-  const e = library.find(x => x.id === id); if (!e) return;
-  const hasProgress = e.userAnswers && Object.keys(e.userAnswers).length > 0;
-  if (hasProgress && !reset) {
-    showResumeModal(id);
-    return;
-  }
-  startExam(e, reset);
-}
-
-function showResumeModal(id) {
-  const overlay = document.getElementById('resumeModal');
-  overlay.classList.remove('hidden');
-  overlay._examId = id;
-}
-
-function closeResumeModal() {
-  document.getElementById('resumeModal').classList.add('hidden');
-}
-
-function startExam(e, reset) {
-  closeResumeModal();
-  activeExam = {
-    id: e.id, name: e.name, createdAt: e.createdAt, questions: e.questions,
-    userAnswers: reset ? {} : (e.userAnswers || {}),
-    isSubmitted: reset ? {} : (e.isSubmitted || {}),
-    isCorrect: reset ? {} : (e.isCorrect || {}),
-    cutWrong: reset ? {} : (e.cutWrong || {}),
-    currentFilter: 'all', currentIndex: 0, reviewMode: null
-  };
-  switchTab('library');
-  showQuizView();
-  applyFilter('all');
-  if (reset) { saveExam(e.name); }
-  toast(reset ? '重新开始：' + e.name : '已加载：' + e.name, 'ok');
-}
-
-function loadWrongExam(id) {
-  const e = library.find(x => x.id === id); if (!e) return;
-  activeExam = { id: e.id, name: e.name, createdAt: e.createdAt, questions: e.questions, userAnswers: e.userAnswers || {}, isSubmitted: e.isSubmitted || {}, isCorrect: e.isCorrect || {}, cutWrong: e.cutWrong || {}, currentFilter: 'all', currentIndex: 0, reviewMode: 'wrong' };
-  const wrong = activeExam.questions.filter((_, i) => activeExam.isSubmitted[i] && !activeExam.isCorrect[i] && !activeExam.cutWrong[i]);
-  if (!wrong.length) { toast('没有错题！', 'ok'); return; }
-  filteredQuestions = wrong; currentIndex = 0; activeExam.currentIndex = 0;
-  switchTab('library');
-  showQuizView();
-  renderTypeTabs();
-  renderExam(); updateProgress();
-  toast('错题集 · ' + wrong.length + ' 道');
-}
-
+// ==================== LIBRARY RENDER ====================
 function renderLib() {
   const grid = document.getElementById('libGrid'), empty = document.getElementById('libEmpty');
   if (library.length === 0) { grid.innerHTML = ''; empty.style.display = 'block'; document.getElementById('libCount').textContent = ''; return; }
   empty.style.display = 'none';
   document.getElementById('libCount').textContent = library.length + ' 份试卷';
-  grid.innerHTML = library.map(e => {
-    const s = e.summary || { total: e.questions.length, done: 0, correct: 0 };
-    const rate = s.done > 0 ? Math.round(s.correct / s.done * 100) : '--';
+  grid.innerHTML = library.map((e, idx) => {
     const d = new Date(e.createdAt);
-    const ds = d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
-    // Calculate remaining wrong questions (submitted, wrong, not yet cut)
-    const cutWrong = e.cutWrong || {};
-    let wrongRemain = 0;
-    for (let i = 0; i < e.questions.length; i++) {
-      if (e.isSubmitted && e.isSubmitted[i] && e.isCorrect && !e.isCorrect[i] && !cutWrong[i]) wrongRemain++;
-    }
-    return `<div class="lib-item">
-      <div class="lib-info" onclick="loadExam('${e.id}')">
+    const ds = d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate();
+    const s = e.summary || { total: e.questions.length, done: 0, correct: 0 };
+    return `<div class="lib-item" onclick="showExamDetail('${e.id}')">
+      <div class="lib-info">
         <div class="lib-name">${escH(e.name)}</div>
-        <div class="lib-meta">${ds} · ${s.total}题</div>
+        <div class="lib-meta">${ds} · ${s.total}题 · ${s.done ? s.done+'题已答' : '未开始'}</div>
       </div>
-      <div class="lib-stats"><span><span class="v">${s.done}/${s.total}</span> 已答</span><span><span class="v" style="color:var(--green);">${s.correct}</span> 正确</span><span><span class="v">${typeof rate==='number'?rate+'%':rate}</span> 正确率</span></div>
-      <div class="lib-actions">
-        <button class="btn btn-p btn-xs" onclick="loadExam('${e.id}')">打开试卷</button>
-        <button class="btn btn-s btn-xs" onclick="loadWrongExam('${e.id}')" style="${wrongRemain > 0 ? 'border-color:var(--red);color:var(--red);' : ''}">错题集${wrongRemain > 0 ? ' · ' + wrongRemain : ''}</button>
-        <button class="lib-del" onclick="event.stopPropagation();deleteExam('${e.id}')">✕</button>
-      </div></div>`;
+      <button class="lib-del" onclick="event.stopPropagation();deleteExam('${e.id}')">✕</button></div>`;
   }).join('');
 }
 
-// ==================== LIB / QUIZ SUB-VIEWS ====================
+// ==================== EXAM DETAIL VIEW ====================
+let detailExamId = null;
+let detailMode = null; // 'sequential' | 'random' | 'wrong'
+
+function showExamDetail(id) {
+  const e = library.find(x => x.id === id); if (!e) return;
+  detailExamId = id; detailMode = null;
+  const s = e.summary || { total: e.questions.length, done: 0, correct: 0 };
+  const w = (s.done || 0) - (s.correct || 0);
+  const cutWrong = e.cutWrong || {};
+  let wrongRemain = 0;
+  for (let i = 0; i < e.questions.length; i++) {
+    if (e.isSubmitted && e.isSubmitted[i] && e.isCorrect && !e.isCorrect[i] && !cutWrong[i]) wrongRemain++;
+  }
+  const d = new Date(e.createdAt);
+  const ds = d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate();
+
+  document.getElementById('libView').style.display = 'none';
+  document.getElementById('detailView').style.display = 'block';
+  document.getElementById('quizView').style.display = 'none';
+
+  const hasProgress = e.userAnswers && Object.keys(e.userAnswers).length > 0;
+
+  document.getElementById('detailView').innerHTML = `
+    <div class="detail-header">
+      <button class="btn btn-s btn-sm btn-back" onclick="backToLib()">← 返回</button>
+      <div class="detail-name-wrap">
+        <input class="detail-name" id="detailName" value="${escH(e.name)}" onchange="renameExam('${e.id}', this.value)">
+        <div class="detail-meta">${ds} · ${s.total}题</div>
+      </div>
+    </div>
+    <div class="detail-stats">
+      <div class="detail-stat"><div class="dsv">${s.total}</div><div class="dsl">总题</div></div>
+      <div class="detail-stat"><div class="dsv" style="color:var(--accent);">${s.done}</div><div class="dsl">已答</div></div>
+      <div class="detail-stat"><div class="dsv" style="color:var(--green);">${s.correct}</div><div class="dsl">正确</div></div>
+      <div class="detail-stat"><div class="dsv" style="color:var(--red);">${wrongRemain}</div><div class="dsl">剩余错题</div></div>
+    </div>
+    <div class="mode-row">
+      <div class="mode-btn" onclick="selectMode('${e.id}', 'sequential')" id="modeSeq">
+        <div class="mode-icon">📖</div>
+        <div class="mode-label">顺序练习</div>
+        <div class="mode-hint">按题目顺序作答</div>
+      </div>
+      <div class="mode-btn" onclick="selectMode('${e.id}', 'random')" id="modeRand">
+        <div class="mode-icon">🔀</div>
+        <div class="mode-label">随机练习</div>
+        <div class="mode-hint">打乱题目顺序</div>
+      </div>
+    </div>
+    ${wrongRemain > 0 ? `<div class="mode-row">
+      <div class="mode-btn wrong-mode" onclick="startPractice('${e.id}', 'wrong', false)" style="flex:0 0 100%;">
+        <div class="mode-icon">📝</div>
+        <div class="mode-label">错题集 · ${wrongRemain}</div>
+        <div class="mode-hint">只看答错的题，可斩题</div>
+      </div>
+    </div>` : ''}
+    <div id="resumeRow"></div>`;
+
+  if (hasProgress) {
+    selectMode(e.id, 'sequential'); // pre-select sequential
+  }
+}
+
+function selectMode(id, mode) {
+  detailMode = mode;
+  const e = library.find(x => x.id === id); if (!e) return;
+  const hasProgress = e.userAnswers && Object.keys(e.userAnswers).length > 0;
+
+  // Highlight selected mode button
+  document.querySelectorAll('.mode-btn:not(.wrong-mode)').forEach(b => {
+    b.style.borderColor = 'var(--border)';
+    b.style.background = 'var(--card)';
+  });
+  const target = mode === 'sequential' ? document.getElementById('modeSeq') : document.getElementById('modeRand');
+  if (target) { target.style.borderColor = 'var(--accent)'; target.style.background = 'var(--accent-l)'; }
+
+  // Show resume/restart options
+  const row = document.getElementById('resumeRow');
+  if (!row) return;
+  if (hasProgress) {
+    row.innerHTML = `
+      <div style="font-size:12px;color:var(--t3);margin-bottom:6px;margin-top:8px;">这份试卷有作答记录，选择：</div>
+      <div class="resume-row">
+        <button class="btn btn-p btn-sm" onclick="startPractice('${e.id}', '${mode}', false)">继续做题</button>
+        <button class="btn btn-s btn-sm" onclick="startPractice('${e.id}', '${mode}', true)">重新开始</button>
+      </div>`;
+  } else {
+    row.innerHTML = `
+      <div class="resume-row" style="margin-top:12px;">
+        <button class="btn btn-p" onclick="startPractice('${e.id}', '${mode}', false)">开始练习</button>
+      </div>`;
+  }
+}
+
+function renameExam(id, newName) {
+  const e = library.find(x => x.id === id); if (!e) return;
+  e.name = newName.trim() || e.name;
+  saveLib(); renderLib();
+  if (activeExam && activeExam.id === id) activeExam.name = e.name;
+}
+
+// ==================== START PRACTICE ====================
+function startPractice(id, mode, reset) {
+  const e = library.find(x => x.id === id); if (!e) return;
+  let questions = [...e.questions];
+  let reviewMode = null;
+
+  if (mode === 'random') {
+    // Fisher-Yates shuffle
+    for (let i = questions.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [questions[i], questions[j]] = [questions[j], questions[i]];
+    }
+  }
+
+  if (mode === 'wrong') {
+    const cutWrong = e.cutWrong || {};
+    questions = questions.filter((_, i) => e.isSubmitted && e.isSubmitted[i] && e.isCorrect && !e.isCorrect[i] && !cutWrong[i]);
+    if (!questions.length) { toast('没有错题！', 'ok'); return; }
+    reviewMode = 'wrong';
+  }
+
+  activeExam = {
+    id: e.id, name: e.name, createdAt: e.createdAt, questions,
+    userAnswers: reset ? {} : (e.userAnswers || {}),
+    isSubmitted: reset ? {} : (e.isSubmitted || {}),
+    isCorrect: reset ? {} : (e.isCorrect || {}),
+    cutWrong: reset ? {} : (e.cutWrong || {}),
+    currentFilter: 'all', currentIndex: 0, reviewMode
+  };
+
+  document.getElementById('detailView').style.display = 'none';
+  document.getElementById('quizView').style.display = 'block';
+  renderQuizTab();
+  applyFilter('all');
+  if (reset) saveExam(e.name);
+  toast((reset ? '重新开始 · ' : '') + ({sequential:'顺序练习',random:'随机练习',wrong:'错题集'}[mode]), 'ok');
+}
+
+// ==================== SUB-VIEW SWITCHING ====================
 function showLibView() {
   document.getElementById('libView').style.display = 'block';
+  document.getElementById('detailView').style.display = 'none';
   document.getElementById('quizView').style.display = 'none';
   renderLib();
 }
 
 function showQuizView() {
   document.getElementById('libView').style.display = 'none';
+  document.getElementById('detailView').style.display = 'none';
   document.getElementById('quizView').style.display = 'block';
   renderQuizTab();
 }
 
 function backToLib() {
-  if (activeExam) { activeExam.reviewMode = null; saveExam(activeExam.name); }
-  showLibView();
+  if (activeExam) { activeExam.reviewMode = null; saveExam(activeExam.name); showExamDetail(activeExam.id); }
+  else { showLibView(); }
 }
 
 // ==================== FILE UPLOAD ====================
@@ -694,10 +793,9 @@ async function generateExam() {
     const name = '试卷 · ' + now.getFullYear()+'/'+(now.getMonth()+1)+'/'+now.getDate()+' '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
 
     activeExam = { id: 'ex_' + Date.now(), name, createdAt: now.toISOString(), questions, userAnswers: {}, isSubmitted: {}, isCorrect: {}, cutWrong: {}, currentFilter: 'all', currentIndex: 0, reviewMode: null };
-    switchTab('library');
-    showQuizView();
-    applyFilter('all');
     saveExam(name);
+    switchTab('library');
+    showExamDetail(activeExam.id);
     status.innerHTML = '<div class="msg ok">已生成 ' + questions.length + ' 题，自动保存到题库</div>';
     toast('生成 ' + questions.length + ' 题', 'ok');
 
@@ -860,8 +958,12 @@ function renderQuizTab() {
   const container = document.getElementById('quizView');
   container.innerHTML = `
     <div class="quiz-header-bar">
-      <button class="btn btn-s btn-sm" onclick="backToLib()">← 返回题库</button>
+      <button class="btn btn-s btn-sm" onclick="backToLib()">← 返回</button>
       <button class="btn btn-s btn-sm" id="sheetToggle" onclick="toggleAnswerSheet()">📋 答题卡</button>
+      <div class="toggle-wrap" onclick="toggleAutoAdvance()">
+        <span>自动跳转</span>
+        <div class="toggle-switch${autoAdvance ? ' on' : ''}" id="autoToggle"></div>
+      </div>
     </div>
     <div class="type-tabs" id="typeTabs"></div>
     <div class="prog-row">
@@ -960,17 +1062,28 @@ function clickSingle(i) {
   activeExam.isSubmitted[oi] = true;
   activeExam.isCorrect[oi] = i === activeExam.questions[oi].correctIndex;
   renderExam(); updateProgress(); checkFinish();
-  // Auto-advance if correct
-  if (activeExam.isCorrect[oi] && currentIndex < filteredQuestions.length - 1) {
+  // Auto-advance if correct and toggle is on
+  if (autoAdvance && activeExam.isCorrect[oi] && currentIndex < filteredQuestions.length - 1) {
     setTimeout(() => { currentIndex++; activeExam.currentIndex = currentIndex; renderExam(); updateProgress(); }, 600);
   }
+}
+
+function toggleAutoAdvance() {
+  autoAdvance = !autoAdvance;
+  const el = document.getElementById('autoToggle');
+  if (el) el.classList.toggle('on', autoAdvance);
+  toast(autoAdvance ? '自动跳转：开' : '自动跳转：关');
 }
 
 // -- Multiple --
 function renderMulti(area, q, oi, sub) {
   const L = ['A','B','C','D','E','F','G'];
   const ua = activeExam.userAnswers[oi] || [];
-  area.innerHTML = `<div style="font-size:11px;color:var(--t3);margin-bottom:6px;">多选，请选择所有正确答案后确认</div>
+  const allSelected = (q.options||[]).every((_, i) => ua.includes(i));
+  area.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+    <span style="font-size:11px;color:var(--t3);">多选，请选择所有正确答案后确认</span>
+    ${!sub ? `<button class="btn btn-s btn-xs" onclick="selectAll(${oi})" style="font-size:11px;">${allSelected ? '取消全选' : '全选'}</button>` : ''}
+  </div>
   <div class="options">${(q.options||[]).map((o,i) => {
     let c = 'opt';
     if (sub) { c += ' disabled'; const cs = new Set(q.correctIndexes||[]);
@@ -979,6 +1092,18 @@ function renderMulti(area, q, oi, sub) {
     return `<div class="${c}" onclick="${sub?'':"togM("+i+")"}"><div class="ic-check">${ua.includes(i)?'✓':''}</div><span>${L[i]}. ${escH(o)}</span></div>`;
   }).join('')}</div>
   ${!sub ? `<button class="btn btn-p btn-sm" onclick="subM(${oi})" ${ua.length===0?'disabled':''}>确认答案</button>` : ''}${sub ? expBox(q) : ''}`;
+}
+
+function selectAll(oi) {
+  if (activeExam.isSubmitted[oi]) return;
+  const q = activeExam.questions[oi];
+  const allSelected = (q.options||[]).every((_, i) => (activeExam.userAnswers[oi]||[]).includes(i));
+  if (allSelected) {
+    activeExam.userAnswers[oi] = [];
+  } else {
+    activeExam.userAnswers[oi] = (q.options||[]).map((_, i) => i);
+  }
+  renderExam();
 }
 
 function togM(i) { const oi = origIdx(); if (activeExam.isSubmitted[oi]) return; if (!activeExam.userAnswers[oi]) activeExam.userAnswers[oi] = []; const a = activeExam.userAnswers[oi]; const p = a.indexOf(i); p >= 0 ? a.splice(p, 1) : a.push(i); renderExam(); }
