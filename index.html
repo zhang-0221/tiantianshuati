@@ -586,6 +586,18 @@ function showExamDetail(id) {
       <div class="detail-stat"><div class="dsv" style="color:var(--green);">${s.correct}</div><div class="dsl">正确</div></div>
       <div class="detail-stat"><div class="dsv" style="color:var(--red);">${wrongRemain}</div><div class="dsl">剩余错题</div></div>
     </div>
+    <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;" id="typeQuickRow">
+      ${(() => {
+        const typeLabels = {single:'单选',multiple:'多选',short:'简答',essay:'论述'};
+        const typeIcons = {single:'🔘',multiple:'☑️',short:'📝',essay:'📄'};
+        const counts = {};
+        for (const q of e.questions) { counts[q.type] = (counts[q.type] || 0) + 1; }
+        return Object.entries(typeLabels).map(([k, v]) => {
+          const n = counts[k] || 0;
+          return `<button class="btn btn-s btn-xs" onclick="event.stopPropagation();startTypePractice('${e.id}','${k}')" style="flex:1;min-width:0;${n===0?'opacity:.4;pointer-events:none;':''}" title="按${v}刷题">${typeIcons[k]} ${v} · ${n}</button>`;
+        }).join('');
+      })()}
+    </div>
     <div class="mode-row">
       <div class="mode-btn" onclick="selectMode('${e.id}', 'sequential')" id="modeSeq">
         <div class="mode-icon">📖</div>
@@ -610,6 +622,23 @@ function showExamDetail(id) {
   if (hasProgress) {
     selectMode(e.id, 'sequential'); // pre-select sequential
   }
+}
+
+function startTypePractice(id, type) {
+  const e = library.find(x => x.id === id); if (!e) return;
+  const questions = e.questions.filter(q => q.type === type);
+  if (!questions.length) { toast('该题型无题目', 'err'); return; }
+  activeExam = {
+    id: e.id, name: e.name, createdAt: e.createdAt, questions,
+    userAnswers: e.userAnswers || {}, isSubmitted: e.isSubmitted || {},
+    isCorrect: e.isCorrect || {}, cutWrong: e.cutWrong || {},
+    currentFilter: type, currentIndex: 0, reviewMode: null
+  };
+  document.getElementById('detailView').style.display = 'none';
+  document.getElementById('quizView').style.display = 'block';
+  renderQuizTab();
+  applyFilter(type);
+  toast('按题型刷题 · ' + {single:'单选',multiple:'多选',short:'简答',essay:'论述'}[type], 'ok');
 }
 
 function selectMode(id, mode) {
