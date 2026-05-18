@@ -253,6 +253,10 @@ textarea::placeholder{color:var(--t3)}
 .edit-btn:hover{background:var(--bg);color:var(--accent)}
 
 .mind-header{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.jsmind-inner{min-height:500px!important}
+jmnodes>jmnode{background:var(--card)!important;border:1.5px solid var(--border)!important;border-radius:8px!important;padding:8px 16px!important;font-family:var(--font)!important;font-size:13px!important;color:var(--text)!important;box-shadow:0 1px 4px rgba(0,0,0,.06)!important}
+jmnodes>jmnode.selected{background:var(--accent-l)!important;border-color:var(--accent)!important}
+jmnodes>jmnode.root{background:var(--accent)!important;border-color:var(--accent-h)!important;color:#fff!important;font-size:15px!important;font-weight:700!important}
 .mind-header .btn-back{flex-shrink:0}
 .mind-detail-card{background:var(--card);border-radius:var(--r);padding:20px;box-shadow:var(--shadow)}
 .mind-detail-card .mind-title{font-size:18px;font-weight:700;margin-bottom:4px}
@@ -1722,8 +1726,9 @@ document.getElementById('chatInput').addEventListener('input', function() {
 });
 
 // ==================== MIND MAP TAB ====================
-let markmapReady = false, markmapLoading = false;
-const MARKMAP_CDN = 'https://esm.sh/markmap-view@0.17.0';
+let jsmindLoaded = false, jsmindLoading = false;
+const JSMIND_JS = 'https://cdn.jsdelivr.net/npm/jsmind@0.8.6/js/jsmind.js';
+const JSMIND_CSS = 'https://cdn.jsdelivr.net/npm/jsmind@0.8.6/style/jsmind.css';
 
 function renderMindList() {
   const examsWithOutline = library.filter(e => e.outline && e.outline.length);
@@ -1761,46 +1766,57 @@ function countOutlineNodes(nodes) {
   return count;
 }
 
-async function loadMarkmap() {
-  if (markmapReady) return true;
-  if (markmapLoading) {
+async function loadJsmind() {
+  if (jsmindLoaded) return true;
+  if (jsmindLoading) {
     for (let i = 0; i < 50; i++) {
       await new Promise(r => setTimeout(r, 200));
-      if (markmapReady) return true;
+      if (jsmindLoaded) return true;
     }
-    return markmapReady;
+    return jsmindLoaded;
   }
-  markmapLoading = true;
+  jsmindLoading = true;
   try {
-    const mod = await import(MARKMAP_CDN);
-    window.markmap = { Markmap: mod.Markmap };
-    markmapReady = true;
-    return true;
+    // Load CSS
+    if (!document.getElementById('jsmind-css')) {
+      const link = document.createElement('link');
+      link.id = 'jsmind-css';
+      link.rel = 'stylesheet';
+      link.href = JSMIND_CSS;
+      document.head.appendChild(link);
+    }
+    await loadScript(JSMIND_JS);
+    if (window.jsMind) {
+      jsmindLoaded = true;
+      return true;
+    }
+    throw new Error('jsMind not available');
   } catch (e) {
-    markmapLoading = false;
+    jsmindLoading = false;
     return false;
   }
 }
 
-function outlineToMarkmapData(nodes) {
-  // Create a virtual root containing all top-level outline nodes
+let nextNodeId = 0;
+function outlineToJsmind(nodes) {
+  nextNodeId = 0;
   return {
-    content: '',
-    children: nodes.map(n => ({
-      content: n.title,
-      children: n.children && n.children.length ? outlineToMarkmapDataChildren(n.children) : []
-    }))
+    id: 'root',
+    topic: '知识大纲',
+    children: nodes.map(n => outlineNodeToJsmind(n))
   };
 }
 
-function outlineToMarkmapDataChildren(nodes) {
-  return nodes.map(n => ({
-    content: n.title,
-    children: n.children && n.children.length ? outlineToMarkmapDataChildren(n.children) : []
-  }));
+function outlineNodeToJsmind(n) {
+  const id = 'n' + (nextNodeId++);
+  return {
+    id: id,
+    topic: n.title,
+    children: n.children && n.children.length ? n.children.map(c => outlineNodeToJsmind(c)) : []
+  };
 }
 
-async function showMindDetail(id) {
+function showMindDetail(id) {
   const e = library.find(x => x.id === id);
   if (!e || !e.outline) { toast('该试卷没有知识大纲', 'err'); return; }
   const d = new Date(e.createdAt);
@@ -1817,32 +1833,33 @@ async function showMindDetail(id) {
       </div>
       <button class="btn btn-s btn-sm" onclick="toggleMindFullscreen()" title="全屏">⛶</button>
     </div>
-    <div class="mind-detail-card" id="mindmapContainer" style="padding:0;overflow:hidden;min-height:500px;">
+    <div class="mind-detail-card" id="mindmapContainer" style="overflow:hidden;min-height:500px;position:relative;">
       <div id="mindmapLoading" style="display:flex;align-items:center;justify-content:center;height:300px;color:var(--t3);font-size:13px;">
         <div class="loading"><div class="spinner"></div>加载思维导图……</div>
       </div>
     </div>`;
 
-  const loaded = await loadMarkmap();
-  if (!loaded) {
-    document.getElementById('mindmapContainer').innerHTML = '<div style="text-align:center;padding:40px;" class="msg err">思维导图库加载失败，请检查网络后刷新重试</div>';
-    return;
-  }
-
-  try {
-    const data = outlineToMarkmapData(e.outline);
-    const container = document.getElementById('mindmapContainer');
-    container.innerHTML = '<svg id="mindmapSvg" style="width:100%;height:70vh;min-height:500px;display:block;"></svg>';
-
-    const { Markmap } = window.markmap;
-    Markmap.create('#mindmapSvg', {
-      autoFit: true,
-      colorFreezeLevel: 2,
-      initialExpandLevel: 2
-    }, data);
-  } catch (err) {
-    document.getElementById('mindmapContainer').innerHTML = '<div style="text-align:center;padding:40px;" class="msg err">渲染失败：' + escH(err.message) + '</div>';
-  }
+  loadJsmind().then(loaded => {
+    if (!loaded) {
+      document.getElementById('mindmapContainer').innerHTML = '<div style="text-align:center;padding:40px;" class="msg err">思维导图库加载失败，请检查网络后刷新重试</div>';
+      return;
+    }
+    try {
+      document.getElementById('mindmapLoading').style.display = 'none';
+      const data = { meta: { name:'喜刷刷', author:'喜刷刷', version:'1.0' }, format:'node_tree', data: outlineToJsmind(e.outline) };
+      const options = {
+        container: 'mindmapContainer',
+        theme: 'primary',
+        editable: false,
+        view: { hmargin: 100, vmargin: 50, line_width: 2, line_color: '#90a4ae' },
+        layout: { hspace: 60, vspace: 20, pspace: 14 }
+      };
+      window._jm = new window.jsMind(options);
+      window._jm.show(data);
+    } catch (err) {
+      document.getElementById('mindmapContainer').innerHTML = '<div style="text-align:center;padding:40px;" class="msg err">渲染失败：' + escH(err.message) + '</div>';
+    }
+  });
 }
 
 function backToMindList() {
