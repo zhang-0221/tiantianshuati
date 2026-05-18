@@ -255,17 +255,32 @@ textarea::placeholder{color:var(--t3)}
 /* Outline Tree */
 .outline-section{background:var(--card);border-radius:var(--r);padding:16px;margin-bottom:12px;box-shadow:var(--shadow);display:none}
 .outline-section.show{display:block}
-.outline-tree,.outline-tree ul{list-style:none;padding-left:20px;position:relative}
-.outline-tree li{position:relative;padding:4px 0;font-size:13px;line-height:1.6}
-.outline-tree li::before{content:'';position:absolute;left:-14px;top:12px;width:10px;height:1px;background:var(--border)}
-.outline-tree ul::before{content:'';position:absolute;left:6px;top:0;bottom:12px;width:1px;background:var(--border)}
+.outline-tree,.outline-tree ul{list-style:none;padding-left:28px;position:relative}
+.outline-tree li{position:relative;padding:3px 0;font-size:13px;line-height:1.6}
+.outline-tree li::before{content:'';position:absolute;left:-20px;top:14px;width:16px;height:1px;background:var(--border)}
+.outline-tree ul::before{content:'';position:absolute;left:10px;top:0;bottom:16px;width:1px;background:var(--border)}
 .outline-tree>li::before{display:none}
 .outline-tree>li{padding-left:0;font-weight:700;font-size:14px;color:var(--text)}
-.outline-tree li .node-title{cursor:default;display:inline-block;padding:2px 6px;border-radius:4px;transition:all .1s}
-.outline-tree li .node-title:hover{background:var(--accent-l)}
-.outline-tree li .node-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);margin-right:6px;vertical-align:middle}
-.outline-tree>li>.node-dot{width:9px;height:9px}
+.outline-tree li .node-wrap{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:6px;cursor:pointer;transition:all .12s;user-select:none}
+.outline-tree li .node-wrap:hover{background:var(--accent-l)}
+.outline-tree li .node-wrap.active{background:var(--accent-l);box-shadow:0 0 0 2px rgba(37,99,235,.15)}
+.outline-tree li .node-toggle{width:16px;height:16px;border-radius:4px;border:1px solid var(--border);background:var(--card);display:inline-flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;transition:all .12s;color:var(--t3);cursor:pointer}
+.outline-tree li .node-toggle:hover{border-color:var(--accent);color:var(--accent)}
+.outline-tree li .node-toggle.open{transform:rotate(0deg)}
+.outline-tree li .node-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0}
+.outline-tree>li>.node-wrap>.node-dot{width:10px;height:10px}
+.outline-tree li.collapsed>ul{display:none}
+.outline-tree li.collapsed>.node-wrap>.node-toggle{transform:rotate(-90deg)}
+.outline-tree li.leaf>.node-wrap>.node-toggle{visibility:hidden}
 .outline-empty{text-align:center;padding:16px;color:var(--t3);font-size:13px}
+
+.mind-header{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.mind-header .btn-back{flex-shrink:0}
+.mind-detail-card{background:var(--card);border-radius:var(--r);padding:20px;box-shadow:var(--shadow)}
+.mind-detail-card .mind-title{font-size:18px;font-weight:700;margin-bottom:4px}
+.mind-detail-card .mind-meta{font-size:12px;color:var(--t3);margin-bottom:16px}
+.mind-expand-all{display:flex;gap:6px;margin-bottom:12px}
+.mind-expand-all .btn{font-size:11px;padding:5px 10px}
 
 /* AI Chat Panel */
 .chat-toggle{
@@ -393,6 +408,9 @@ textarea::placeholder{color:var(--t3)}
       <button class="sidebar-item" id="navLib" onclick="switchTab('library')">
         <span class="si-icon">📚</span>我的题库
       </button>
+      <button class="sidebar-item" id="navMind" onclick="switchTab('mindmap')">
+        <span class="si-icon">🧠</span>思维导图
+      </button>
     </nav>
     <div class="sidebar-bottom">
       <button class="sidebar-item" onclick="openSettings()">
@@ -439,6 +457,16 @@ textarea::placeholder{color:var(--t3)}
       <div id="detailView" style="display:none;"></div>
       <!-- 子视图：刷题 -->
       <div id="quizView" style="display:none;"></div>
+    </div>
+
+    <!-- Tab: 思维导图 -->
+    <div class="tab-content" id="tabMindmap">
+      <div id="mindListView">
+        <div class="card-hd" style="margin-bottom:12px;">🧠 思维导图 <span class="card-tag" id="mindCount"></span></div>
+        <div class="lib-list" id="mindGrid"></div>
+        <div class="empty-state" id="mindEmpty">还没有试卷生成过知识大纲，导入资料时勾选「生成知识大纲」即可</div>
+      </div>
+      <div id="mindDetailView" style="display:none;"></div>
     </div>
   </main>
 </div>
@@ -547,8 +575,11 @@ function toggleSidebar() {
 function switchTab(tab) {
   document.getElementById('tabImport').classList.toggle('active', tab === 'import');
   document.getElementById('tabLibrary').classList.toggle('active', tab === 'library');
+  document.getElementById('tabMindmap').classList.toggle('active', tab === 'mindmap');
   document.getElementById('navImport').classList.toggle('active', tab === 'import');
   document.getElementById('navLib').classList.toggle('active', tab === 'library');
+  document.getElementById('navMind').classList.toggle('active', tab === 'mindmap');
+  if (tab === 'mindmap') renderMindList();
   // Close mobile sidebar after switching tab
   if (window.innerWidth <= 640) { document.getElementById('sidebar').classList.remove('open'); document.getElementById('hamburger').textContent = '☰'; }
 }
@@ -1080,17 +1111,20 @@ const SYS_PROMPT_OUTLINE = `你是专业考试出题系统。根据用户提供�
 - "essay" 论述题（约10%）：综合分析。提供参考要点。
 
 ## 知识大纲
-根据资料层级结构，生成树状知识大纲。每个节点包含 "title"（标题）和 "children"（子节点数组，可为空）。大纲需反映资料的章节/知识点的层次关系。
+根据资料层级结构，生成详细树状知识大纲，深度至少3-4层。要求：
+- 覆盖资料中所有主要知识点，每个知识点尽量展开到基本面
+- 每个节点包含 "title"（标题）和 "children"（子节点数组，可为空）
+- 末级节点可包含具体概念、关键定义、重要公式名称等，标题要简洁（10字以内）
 
 ## 要求
 1. 正确选项准确，错误选项有迷惑性但明确错误
 2. 解析简短（1-2句），引用原文
 3. question不包含选项，选项独立在options数组
-4. 大纲节点概括资料章节，每个节点含title和children字段
+4. 大纲每个节点含title和children字段，深度充足、不空洞
 5. 只输出JSON，不要任何解释或前言
 
 ## JSON格式（严格）
-{"questions":[...],"outline":[{"title":"第一章 XX概述","children":[{"title":"1.1 基本概念","children":[{"title":"核心定义","children":[]}]},{"title":"1.2 重要原理","children":[]}]}]}`;
+{"questions":[...],"outline":[{"title":"第一章 XX概述","children":[{"title":"1.1 基本概念","children":[{"title":"定义与特征","children":[{"title":"核心定义","children":[]},{"title":"关键特征","children":[]}]},{"title":"分类","children":[{"title":"类型A","children":[]}]}]},{"title":"1.2 重要原理","children":[]}]}]}`;
 
 // ==================== QUIZ RENDER ====================
 function renderQuizTab() {
@@ -1719,11 +1753,111 @@ function renderOutlineTree(nodes) {
   if (!nodes || !nodes.length) return '';
   return nodes.map(n => {
     const hasChildren = n.children && n.children.length;
-    return `<li>
-      <span class="node-dot"></span><span class="node-title">${escH(n.title)}</span>
+    return `<li class="${hasChildren ? 'expanded' : 'leaf'}">
+      <div class="node-wrap" onclick="event.stopPropagation();toggleNode(this.parentElement)">
+        <span class="node-toggle ${hasChildren ? 'open' : ''}">▼</span>
+        <span class="node-dot"></span><span>${escH(n.title)}</span>
+      </div>
       ${hasChildren ? '<ul>' + renderOutlineTree(n.children) + '</ul>' : ''}
     </li>`;
   }).join('');
+}
+
+function toggleNode(li) {
+  if (li.classList.contains('leaf')) return;
+  li.classList.toggle('collapsed');
+  li.classList.toggle('expanded');
+  const toggle = li.querySelector('.node-toggle');
+  if (toggle) toggle.classList.toggle('open', !li.classList.contains('collapsed'));
+}
+
+// ==================== MIND MAP TAB ====================
+function renderMindList() {
+  const examsWithOutline = library.filter(e => e.outline && e.outline.length);
+  const grid = document.getElementById('mindGrid'), empty = document.getElementById('mindEmpty');
+  document.getElementById('mindListView').style.display = 'block';
+  document.getElementById('mindDetailView').style.display = 'none';
+
+  if (examsWithOutline.length === 0) {
+    grid.innerHTML = '';
+    empty.style.display = 'block';
+    document.getElementById('mindCount').textContent = '';
+    return;
+  }
+  empty.style.display = 'none';
+  document.getElementById('mindCount').textContent = examsWithOutline.length + ' 份大纲';
+  grid.innerHTML = examsWithOutline.map(e => {
+    const d = new Date(e.createdAt);
+    const ds = d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate();
+    const nodeCount = countOutlineNodes(e.outline);
+    return `<div class="lib-item" onclick="showMindDetail('${e.id}')">
+      <div class="lib-info">
+        <div class="lib-name">${escH(e.name)}</div>
+        <div class="lib-meta">${ds} · ${e.questions.length}题 · ${nodeCount}个知识点</div>
+      </div>
+      <button class="lib-del" onclick="event.stopPropagation();deleteExam('${e.id}')">✕</button></div>`;
+  }).join('');
+}
+
+function countOutlineNodes(nodes) {
+  let count = 0;
+  for (const n of nodes) {
+    count++;
+    if (n.children && n.children.length) count += countOutlineNodes(n.children);
+  }
+  return count;
+}
+
+function showMindDetail(id) {
+  const e = library.find(x => x.id === id);
+  if (!e || !e.outline) { toast('该试卷没有知识大纲', 'err'); return; }
+  const d = new Date(e.createdAt);
+  const ds = d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate();
+
+  document.getElementById('mindListView').style.display = 'none';
+  document.getElementById('mindDetailView').style.display = 'block';
+  document.getElementById('mindDetailView').innerHTML = `
+    <div class="mind-header">
+      <button class="btn btn-s btn-sm btn-back" onclick="backToMindList()">← 返回</button>
+      <div style="flex:1;">
+        <h2 class="detail-name-display">${escH(e.name)}</h2>
+        <div style="font-size:11px;color:var(--t3);">${ds} · ${countOutlineNodes(e.outline)}个知识点</div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:8px;">
+      <div class="mind-expand-all">
+        <button class="btn btn-s btn-xs" onclick="expandAllMind()">展开全部</button>
+        <button class="btn btn-s btn-xs" onclick="collapseAllMind()">折叠全部</button>
+      </div>
+    </div>
+    <div class="mind-detail-card">
+      <ul class="outline-tree" id="mindTree">${renderOutlineTree(e.outline)}</ul>
+    </div>`;
+}
+
+function backToMindList() {
+  document.getElementById('mindListView').style.display = 'block';
+  document.getElementById('mindDetailView').style.display = 'none';
+}
+
+function expandAllMind() {
+  document.querySelectorAll('#mindTree li').forEach(li => {
+    li.classList.remove('collapsed');
+    li.classList.add('expanded');
+    const t = li.querySelector('.node-toggle');
+    if (t) t.classList.add('open');
+  });
+}
+
+function collapseAllMind() {
+  document.querySelectorAll('#mindTree li').forEach(li => {
+    if (!li.classList.contains('leaf')) {
+      li.classList.add('collapsed');
+      li.classList.remove('expanded');
+      const t = li.querySelector('.node-toggle');
+      if (t) t.classList.remove('open');
+    }
+  });
 }
 
 // ==================== INIT ====================
