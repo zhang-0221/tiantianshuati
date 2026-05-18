@@ -448,6 +448,20 @@ textarea::placeholder{color:var(--t3)}
   </div>
 </div>
 
+<!-- Resume Modal -->
+<div class="modal-overlay hidden" id="resumeModal">
+  <div class="modal">
+    <h3 id="resumeModalTitle">开始练习</h3>
+    <p id="resumeModalDesc"></p>
+    <div class="modal-btns" id="resumeModalBtns">
+      <button class="btn btn-s btn-sm" onclick="closeResumeModal()">取消</button>
+      <button class="btn btn-p btn-sm" id="resumeBtnContinue">继续做题</button>
+      <button class="btn btn-s btn-sm" id="resumeBtnRestart">重新开始</button>
+      <button class="btn btn-p" id="resumeBtnStart">开始练习</button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast-wrap" id="toastWrap"></div>
 
@@ -533,6 +547,7 @@ function closeSettings() { document.getElementById('settingsModal').classList.ad
 function saveApiKey() { apiKey = document.getElementById('apiKeyInput').value.trim(); localStorage.setItem(LS_KEY, apiKey); updateKeyBtn(); closeSettings(); toast(apiKey ? 'API Key 已保存' : 'API Key 已清除', 'ok'); }
 document.getElementById('settingsModal').addEventListener('click', function(e) { if (e === this) closeSettings(); });
 document.getElementById('editModal').addEventListener('click', function(e) { if (e === this) closeEditModal(); });
+document.getElementById('resumeModal').addEventListener('click', function(e) { if (e === this) closeResumeModal(); });
 
 // ==================== LIBRARY ====================
 function loadLib() { try { library = JSON.parse(localStorage.getItem(LS_LIB) || '[]'); } catch { library = []; } }
@@ -605,8 +620,6 @@ function showExamDetail(id) {
   document.getElementById('detailView').style.display = 'block';
   document.getElementById('quizView').style.display = 'none';
 
-  const hasProgress = e.userAnswers && Object.keys(e.userAnswers).length > 0;
-
   document.getElementById('detailView').innerHTML = `
     <div class="detail-header">
       <button class="btn btn-s btn-sm btn-back" onclick="backToLibFromDetail()">← 返回</button>
@@ -652,11 +665,7 @@ function showExamDetail(id) {
         <div class="mode-hint">${wrongRemain > 0 ? '只看答错的题，可斩题' : '暂无错题，答题后自动更新'}</div>
       </div>
     </div>
-    <div id="resumeRow"></div>`;
-
-  if (hasProgress) {
-    selectMode(e.id, 'sequential'); // pre-select sequential
-  }
+  `;
 }
 
 function startTypePractice(id, type) {
@@ -681,30 +690,22 @@ function selectMode(id, mode) {
   const e = library.find(x => x.id === id); if (!e) return;
   const hasProgress = e.userAnswers && Object.keys(e.userAnswers).length > 0;
 
-  // Highlight selected mode button
-  document.querySelectorAll('.mode-btn:not(.wrong-mode)').forEach(b => {
-    b.style.borderColor = 'var(--border)';
-    b.style.background = 'var(--card)';
-  });
-  const target = mode === 'sequential' ? document.getElementById('modeSeq') : document.getElementById('modeRand');
-  if (target) { target.style.borderColor = 'var(--accent)'; target.style.background = 'var(--accent-l)'; }
+  // Set up modal buttons
+  document.getElementById('resumeBtnContinue').style.display = hasProgress ? '' : 'none';
+  document.getElementById('resumeBtnRestart').style.display = hasProgress ? '' : 'none';
+  document.getElementById('resumeBtnStart').style.display = hasProgress ? 'none' : '';
+  document.getElementById('resumeModalTitle').textContent = hasProgress ? '这份试卷有作答记录' : '开始练习';
+  document.getElementById('resumeModalDesc').textContent = hasProgress ? '继续上次的进度还是重新开始？' : '';
 
-  // Show resume/restart options
-  const row = document.getElementById('resumeRow');
-  if (!row) return;
-  if (hasProgress) {
-    row.innerHTML = `
-      <div style="font-size:12px;color:var(--t3);margin-bottom:6px;margin-top:8px;">这份试卷有作答记录，选择：</div>
-      <div class="resume-row">
-        <button class="btn btn-p btn-sm" onclick="startPractice('${e.id}', '${mode}', false)">继续做题</button>
-        <button class="btn btn-s btn-sm" onclick="startPractice('${e.id}', '${mode}', true)">重新开始</button>
-      </div>`;
-  } else {
-    row.innerHTML = `
-      <div class="resume-row" style="margin-top:12px;">
-        <button class="btn btn-p" onclick="startPractice('${e.id}', '${mode}', false)">开始练习</button>
-      </div>`;
-  }
+  document.getElementById('resumeBtnContinue').onclick = function() { closeResumeModal(); startPractice(id, mode, false); };
+  document.getElementById('resumeBtnRestart').onclick = function() { closeResumeModal(); startPractice(id, mode, true); };
+  document.getElementById('resumeBtnStart').onclick = function() { closeResumeModal(); startPractice(id, mode, false); };
+
+  document.getElementById('resumeModal').classList.remove('hidden');
+}
+
+function closeResumeModal() {
+  document.getElementById('resumeModal').classList.add('hidden');
 }
 
 function renameLibExam(id) {
