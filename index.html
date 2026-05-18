@@ -252,6 +252,21 @@ textarea::placeholder{color:var(--t3)}
 .edit-btn{background:none;border:none;cursor:pointer;font-size:12px;padding:2px 6px;border-radius:4px;color:var(--t3);transition:all .12s;margin-left:6px}
 .edit-btn:hover{background:var(--bg);color:var(--accent)}
 
+/* Outline Tree */
+.outline-section{background:var(--card);border-radius:var(--r);padding:16px;margin-bottom:12px;box-shadow:var(--shadow);display:none}
+.outline-section.show{display:block}
+.outline-tree,.outline-tree ul{list-style:none;padding-left:20px;position:relative}
+.outline-tree li{position:relative;padding:4px 0;font-size:13px;line-height:1.6}
+.outline-tree li::before{content:'';position:absolute;left:-14px;top:12px;width:10px;height:1px;background:var(--border)}
+.outline-tree ul::before{content:'';position:absolute;left:6px;top:0;bottom:12px;width:1px;background:var(--border)}
+.outline-tree>li::before{display:none}
+.outline-tree>li{padding-left:0;font-weight:700;font-size:14px;color:var(--text)}
+.outline-tree li .node-title{cursor:default;display:inline-block;padding:2px 6px;border-radius:4px;transition:all .1s}
+.outline-tree li .node-title:hover{background:var(--accent-l)}
+.outline-tree li .node-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);margin-right:6px;vertical-align:middle}
+.outline-tree>li>.node-dot{width:9px;height:9px}
+.outline-empty{text-align:center;padding:16px;color:var(--t3);font-size:13px}
+
 /* AI Chat Panel */
 .chat-toggle{
   position:fixed;right:8px;top:50%;transform:translateY(-50%);z-index:500;
@@ -402,7 +417,12 @@ textarea::placeholder{color:var(--t3)}
         <div id="fileBadge" style="display:none;"></div>
         <div class="divider">或者粘贴文本</div>
         <textarea id="materialInput" placeholder="粘贴复习资料……&#10;换行分隔不同知识点效果更好"></textarea>
-        <button class="btn btn-p" id="genBtn" onclick="generateExam()" style="margin-top:10px;">AI 生成试卷</button>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;">
+          <label class="toggle-wrap" style="font-size:13px;color:var(--text);gap:8px;">
+            <input type="checkbox" id="outlineToggle" style="width:16px;height:16px;accent-color:var(--accent);"> 同时生成知识大纲（思维导图）
+          </label>
+          <button class="btn btn-p" id="genBtn" onclick="generateExam()">AI 生成试卷</button>
+        </div>
         <div id="genStatus"></div>
       </div>
     </div>
@@ -559,9 +579,10 @@ function saveExam(name) {
   const idx = library.findIndex(e => e.id === activeExam.id);
   // Always preserve original question order from library
   const origQuestions = idx >= 0 ? library[idx].questions : activeExam.questions;
+  const origOutline = idx >= 0 ? library[idx].outline : activeExam.outline;
   const data = {
     id: activeExam.id, name: name || activeExam.name, createdAt: activeExam.createdAt,
-    questions: origQuestions, userAnswers: activeExam.userAnswers,
+    questions: origQuestions, outline: origOutline, userAnswers: activeExam.userAnswers,
     isSubmitted: activeExam.isSubmitted, isCorrect: activeExam.isCorrect,
     cutWrong: activeExam.cutWrong,
   };
@@ -665,6 +686,11 @@ function showExamDetail(id) {
         <div class="mode-hint">${wrongRemain > 0 ? '只看答错的题，可斩题' : '暂无错题，答题后自动更新'}</div>
       </div>
     </div>
+    ${e.outline && e.outline.length ? `
+    <div class="outline-section show" id="outlineSection">
+      <div class="card-hd" style="margin-bottom:8px;">📊 知识大纲</div>
+      <ul class="outline-tree" id="outlineTree">${renderOutlineTree(e.outline)}</ul>
+    </div>` : ''}
   `;
 }
 
@@ -837,11 +863,13 @@ async function generateExam() {
   if (!apiKey.startsWith('sk-')) { toast('API Key 格式不正确，应以 sk- 开头', 'err'); return; }
 
   const btn = document.getElementById('genBtn'), status = document.getElementById('genStatus');
+  const includeOutline = document.getElementById('outlineToggle').checked;
   btn.disabled = true; btn.textContent = 'AI 生成中……';
   status.innerHTML = '<div class="loading"><div class="spinner"></div>连接 DeepSeek……</div>';
 
   try {
     let allQuestions = [];
+    let outline = null;
 
     // For materials > 8000 chars, split into chunks and process in batches
     if (material.length > 8000) {
@@ -850,14 +878,15 @@ async function generateExam() {
 
       for (let ci = 0; ci < chunks.length; ci++) {
         status.innerHTML = '<div class="loading"><div class="spinner"></div>AI 正在出题：第 ' + (ci+1) + '/' + chunks.length + ' 段……</div>';
-
-        const chunkQuestions = await callAI(chunks[ci], '请根据以下学习资料生成考试题目，尽量覆盖本段所有知识点：\n\n' + chunks[ci]);
-        allQuestions = allQuestions.concat(chunkQuestions);
+        const result = await callAI(chunks[ci], '请根据以下学习资料生成考试题目，尽量覆盖本段所有知识点：\n\n' + chunks[ci], false);
+        allQuestions = allQuestions.concat(result.questions);
       }
     } else {
       // Single call for smaller materials
-      status.innerHTML = '<div class="loading"><div class="spinner"></div>AI 正在分析资料并生成题目……</div>';
-      allQuestions = await callAI(material, '请根据以下学习资料生成考试题目，覆盖资料中所有知识点：\n\n' + material);
+      status.innerHTML = '<div class="loading"><div class="spinner"></div>AI 正在分析资料并生成题目' + (includeOutline ? '和知识大纲' : '') + '……</div>';
+      const result = await callAI(material, '请根据以下学习资料生成考试题目，覆盖资料中所有知识点：\n\n' + material, includeOutline);
+      allQuestions = result.questions;
+      outline = result.outline || null;
     }
 
     if (allQuestions.length === 0) throw new Error('未生成有效题目');
@@ -872,7 +901,7 @@ async function generateExam() {
     const now = new Date();
     const name = '试卷 · ' + now.getFullYear()+'/'+(now.getMonth()+1)+'/'+now.getDate()+' '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
 
-    activeExam = { id: 'ex_' + Date.now(), name, createdAt: now.toISOString(), questions, userAnswers: {}, isSubmitted: {}, isCorrect: {}, cutWrong: {}, currentFilter: 'all', currentIndex: 0, reviewMode: null };
+    activeExam = { id: 'ex_' + Date.now(), name, createdAt: now.toISOString(), questions, outline, userAnswers: {}, isSubmitted: {}, isCorrect: {}, cutWrong: {}, currentFilter: 'all', currentIndex: 0, reviewMode: null };
     saveExam(name);
     switchTab('library');
     showExamDetail(activeExam.id);
@@ -906,12 +935,13 @@ function splitIntoChunks(text, targetSize) {
   return chunks.length > 0 ? chunks : [text];
 }
 
-// Call DeepSeek API and parse questions from response
-async function callAI(materialChunk, userMsg) {
+// Call DeepSeek API and parse questions (and optionally outline) from response
+async function callAI(materialChunk, userMsg, includeOutline) {
+  const sysPrompt = includeOutline ? SYS_PROMPT_OUTLINE : SYS_PROMPT;
   const resp = await fetchTimeout('https://api.deepseek.com/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
-    body: JSON.stringify({ model: 'deepseek-chat', messages: [{ role: 'system', content: SYS_PROMPT }, { role: 'user', content: userMsg }], temperature: 0.7, max_tokens: 8192 })
+    body: JSON.stringify({ model: 'deepseek-chat', messages: [{ role: 'system', content: sysPrompt }, { role: 'user', content: userMsg }], temperature: 0.7, max_tokens: 8192 })
   }, 120000);
 
   if (!resp.ok) {
@@ -926,11 +956,12 @@ async function callAI(materialChunk, userMsg) {
   const content = data.choices?.[0]?.message?.content;
   if (!content || !content.trim()) throw new Error('API 返回空内容');
 
-  return parseQuestionsFromContent(content.trim());
+  const parsed = parseAIResponse(content.trim());
+  return { questions: parsed.questions, outline: parsed.outline || null };
 }
 
-// Extract questions array from AI response (robust multi-level parsing)
-function parseQuestionsFromContent(trimmed) {
+// Extract questions and outline from AI response (robust multi-level parsing)
+function parseAIResponse(trimmed) {
   let parsed = null;
 
   // Try 1: direct JSON parse
@@ -963,7 +994,10 @@ function parseQuestionsFromContent(trimmed) {
     throw new Error('JSON 解析失败，请重试');
   }
 
-  return parsed.questions.filter(q => q.question && q.question.trim());
+  return {
+    questions: parsed.questions.filter(q => q.question && q.question.trim()),
+    outline: parsed.outline || null
+  };
 }
 
 // Repair truncated JSON: close unclosed strings, brackets, braces
@@ -1031,6 +1065,32 @@ const SYS_PROMPT = `你是专业考试出题系统。根据用户提供的学习
 
 ## JSON格式（严格）
 {"questions":[{"type":"single","question":"...","options":["A","B","C","D"],"correctIndex":0,"explanation":"简短的解析"},{"type":"multiple","question":"...","options":["A","B","C","D","E"],"correctIndexes":[0,2],"explanation":"简短的解析"},{"type":"short","question":"...","referenceAnswer":"...","explanation":"简短的解析"},{"type":"essay","question":"...","referenceAnswer":"...","explanation":"简短的解析"}]}`;
+
+const SYS_PROMPT_OUTLINE = `你是专业考试出题系统。根据用户提供的学习资料生成高质量题目和知识大纲。
+
+## 铁律（最重要）
+- 题目和知识大纲必须100%基于用户提供的资料，禁止编造任何资料中不存在的内容
+- 如果资料信息不足以支撑某道题或某个知识点，宁可不生成
+- 题干、选项、解析、大纲中涉及的知识点必须能在资料原文中找到依据
+
+## 题型分配
+- "single" 单选题（约50%）：概念辨析。4选项，1正确答案。
+- "multiple" 多选题（约25%）：特征列举。4-6选项，2-4正确答案。
+- "short" 简答题（约15%）：名词解释。提供参考答案。
+- "essay" 论述题（约10%）：综合分析。提供参考要点。
+
+## 知识大纲
+根据资料层级结构，生成树状知识大纲。每个节点包含 "title"（标题）和 "children"（子节点数组，可为空）。大纲需反映资料的章节/知识点的层次关系。
+
+## 要求
+1. 正确选项准确，错误选项有迷惑性但明确错误
+2. 解析简短（1-2句），引用原文
+3. question不包含选项，选项独立在options数组
+4. 大纲节点概括资料章节，每个节点含title和children字段
+5. 只输出JSON，不要任何解释或前言
+
+## JSON格式（严格）
+{"questions":[...],"outline":[{"title":"第一章 XX概述","children":[{"title":"1.1 基本概念","children":[{"title":"核心定义","children":[]}]},{"title":"1.2 重要原理","children":[]}]}]}`;
 
 // ==================== QUIZ RENDER ====================
 function renderQuizTab() {
@@ -1653,6 +1713,18 @@ document.getElementById('chatInput').addEventListener('input', function() {
   this.style.height = 'auto';
   this.style.height = Math.min(this.scrollHeight, 100) + 'px';
 });
+
+// ==================== OUTLINE TREE ====================
+function renderOutlineTree(nodes) {
+  if (!nodes || !nodes.length) return '';
+  return nodes.map(n => {
+    const hasChildren = n.children && n.children.length;
+    return `<li>
+      <span class="node-dot"></span><span class="node-title">${escH(n.title)}</span>
+      ${hasChildren ? '<ul>' + renderOutlineTree(n.children) + '</ul>' : ''}
+    </li>`;
+  }).join('');
+}
 
 // ==================== INIT ====================
 renderLib();
