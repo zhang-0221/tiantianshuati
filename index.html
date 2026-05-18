@@ -252,28 +252,6 @@ textarea::placeholder{color:var(--t3)}
 .edit-btn{background:none;border:none;cursor:pointer;font-size:12px;padding:2px 6px;border-radius:4px;color:var(--t3);transition:all .12s;margin-left:6px}
 .edit-btn:hover{background:var(--bg);color:var(--accent)}
 
-/* Outline Tree */
-.outline-section{background:var(--card);border-radius:var(--r);padding:16px;margin-bottom:12px;box-shadow:var(--shadow);display:none}
-.outline-section.show{display:block}
-.outline-tree,.outline-tree ul{list-style:none;padding-left:28px;position:relative}
-.outline-tree li{position:relative;padding:3px 0;font-size:13px;line-height:1.6}
-.outline-tree li::before{content:'';position:absolute;left:-20px;top:14px;width:16px;height:1px;background:var(--border)}
-.outline-tree ul::before{content:'';position:absolute;left:10px;top:0;bottom:16px;width:1px;background:var(--border)}
-.outline-tree>li::before{display:none}
-.outline-tree>li{padding-left:0;font-weight:700;font-size:14px;color:var(--text)}
-.outline-tree li .node-wrap{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:6px;cursor:pointer;transition:all .12s;user-select:none}
-.outline-tree li .node-wrap:hover{background:var(--accent-l)}
-.outline-tree li .node-wrap.active{background:var(--accent-l);box-shadow:0 0 0 2px rgba(37,99,235,.15)}
-.outline-tree li .node-toggle{width:16px;height:16px;border-radius:4px;border:1px solid var(--border);background:var(--card);display:inline-flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;transition:all .12s;color:var(--t3);cursor:pointer}
-.outline-tree li .node-toggle:hover{border-color:var(--accent);color:var(--accent)}
-.outline-tree li .node-toggle.open{transform:rotate(0deg)}
-.outline-tree li .node-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0}
-.outline-tree>li>.node-wrap>.node-dot{width:10px;height:10px}
-.outline-tree li.collapsed>ul{display:none}
-.outline-tree li.collapsed>.node-wrap>.node-toggle{transform:rotate(-90deg)}
-.outline-tree li.leaf>.node-wrap>.node-toggle{visibility:hidden}
-.outline-empty{text-align:center;padding:16px;color:var(--t3);font-size:13px}
-
 .mind-header{display:flex;align-items:center;gap:10px;margin-bottom:16px}
 .mind-header .btn-back{flex-shrink:0}
 .mind-detail-card{background:var(--card);border-radius:var(--r);padding:20px;box-shadow:var(--shadow)}
@@ -717,11 +695,6 @@ function showExamDetail(id) {
         <div class="mode-hint">${wrongRemain > 0 ? '只看答错的题，可斩题' : '暂无错题，答题后自动更新'}</div>
       </div>
     </div>
-    ${e.outline && e.outline.length ? `
-    <div class="outline-section show" id="outlineSection">
-      <div class="card-hd" style="margin-bottom:8px;">📊 知识大纲</div>
-      <ul class="outline-tree" id="outlineTree">${renderOutlineTree(e.outline)}</ul>
-    </div>` : ''}
   `;
 }
 
@@ -1748,30 +1721,10 @@ document.getElementById('chatInput').addEventListener('input', function() {
   this.style.height = Math.min(this.scrollHeight, 100) + 'px';
 });
 
-// ==================== OUTLINE TREE ====================
-function renderOutlineTree(nodes) {
-  if (!nodes || !nodes.length) return '';
-  return nodes.map(n => {
-    const hasChildren = n.children && n.children.length;
-    return `<li class="${hasChildren ? 'expanded' : 'leaf'}">
-      <div class="node-wrap" onclick="event.stopPropagation();toggleNode(this.parentElement)">
-        <span class="node-toggle ${hasChildren ? 'open' : ''}">▼</span>
-        <span class="node-dot"></span><span>${escH(n.title)}</span>
-      </div>
-      ${hasChildren ? '<ul>' + renderOutlineTree(n.children) + '</ul>' : ''}
-    </li>`;
-  }).join('');
-}
-
-function toggleNode(li) {
-  if (li.classList.contains('leaf')) return;
-  li.classList.toggle('collapsed');
-  li.classList.toggle('expanded');
-  const toggle = li.querySelector('.node-toggle');
-  if (toggle) toggle.classList.toggle('open', !li.classList.contains('collapsed'));
-}
-
 // ==================== MIND MAP TAB ====================
+let markmapReady = false, markmapLoading = false;
+const MARKMAP_CDN = 'https://cdn.jsdelivr.net/npm/markmap-view@0.17.0/dist/index.js';
+
 function renderMindList() {
   const examsWithOutline = library.filter(e => e.outline && e.outline.length);
   const grid = document.getElementById('mindGrid'), empty = document.getElementById('mindEmpty');
@@ -1808,7 +1761,50 @@ function countOutlineNodes(nodes) {
   return count;
 }
 
-function showMindDetail(id) {
+async function loadMarkmap() {
+  if (markmapReady) return true;
+  if (markmapLoading) {
+    for (let i = 0; i < 50; i++) {
+      await new Promise(r => setTimeout(r, 200));
+      if (markmapReady) return true;
+    }
+    return markmapReady;
+  }
+  markmapLoading = true;
+  try {
+    await loadScript(MARKMAP_CDN);
+    // Give the script time to initialize
+    await new Promise(r => setTimeout(r, 600));
+    if (window.markmap && window.markmap.Markmap) {
+      markmapReady = true;
+      return true;
+    }
+    throw new Error('markmap init failed');
+  } catch (e) {
+    markmapLoading = false;
+    return false;
+  }
+}
+
+function outlineToMarkmapData(nodes) {
+  // Create a virtual root containing all top-level outline nodes
+  return {
+    content: '',
+    children: nodes.map(n => ({
+      content: n.title,
+      children: n.children && n.children.length ? outlineToMarkmapDataChildren(n.children) : []
+    }))
+  };
+}
+
+function outlineToMarkmapDataChildren(nodes) {
+  return nodes.map(n => ({
+    content: n.title,
+    children: n.children && n.children.length ? outlineToMarkmapDataChildren(n.children) : []
+  }));
+}
+
+async function showMindDetail(id) {
   const e = library.find(x => x.id === id);
   if (!e || !e.outline) { toast('该试卷没有知识大纲', 'err'); return; }
   const d = new Date(e.createdAt);
@@ -1823,16 +1819,34 @@ function showMindDetail(id) {
         <h2 class="detail-name-display">${escH(e.name)}</h2>
         <div style="font-size:11px;color:var(--t3);">${ds} · ${countOutlineNodes(e.outline)}个知识点</div>
       </div>
+      <button class="btn btn-s btn-sm" onclick="toggleMindFullscreen()" title="全屏">⛶</button>
     </div>
-    <div class="card" style="margin-bottom:8px;">
-      <div class="mind-expand-all">
-        <button class="btn btn-s btn-xs" onclick="expandAllMind()">展开全部</button>
-        <button class="btn btn-s btn-xs" onclick="collapseAllMind()">折叠全部</button>
+    <div class="mind-detail-card" id="mindmapContainer" style="padding:0;overflow:hidden;min-height:500px;">
+      <div id="mindmapLoading" style="display:flex;align-items:center;justify-content:center;height:300px;color:var(--t3);font-size:13px;">
+        <div class="loading"><div class="spinner"></div>加载思维导图……</div>
       </div>
-    </div>
-    <div class="mind-detail-card">
-      <ul class="outline-tree" id="mindTree">${renderOutlineTree(e.outline)}</ul>
     </div>`;
+
+  const loaded = await loadMarkmap();
+  if (!loaded) {
+    document.getElementById('mindmapContainer').innerHTML = '<div style="text-align:center;padding:40px;" class="msg err">思维导图库加载失败，请检查网络后刷新重试</div>';
+    return;
+  }
+
+  try {
+    const data = outlineToMarkmapData(e.outline);
+    const container = document.getElementById('mindmapContainer');
+    container.innerHTML = '<svg id="mindmapSvg" style="width:100%;height:70vh;min-height:500px;display:block;"></svg>';
+
+    const { Markmap } = window.markmap;
+    Markmap.create('#mindmapSvg', {
+      autoFit: true,
+      colorFreezeLevel: 2,
+      initialExpandLevel: 2
+    }, data);
+  } catch (err) {
+    document.getElementById('mindmapContainer').innerHTML = '<div style="text-align:center;padding:40px;" class="msg err">渲染失败：' + escH(err.message) + '</div>';
+  }
 }
 
 function backToMindList() {
@@ -1840,24 +1854,14 @@ function backToMindList() {
   document.getElementById('mindDetailView').style.display = 'none';
 }
 
-function expandAllMind() {
-  document.querySelectorAll('#mindTree li').forEach(li => {
-    li.classList.remove('collapsed');
-    li.classList.add('expanded');
-    const t = li.querySelector('.node-toggle');
-    if (t) t.classList.add('open');
-  });
-}
-
-function collapseAllMind() {
-  document.querySelectorAll('#mindTree li').forEach(li => {
-    if (!li.classList.contains('leaf')) {
-      li.classList.add('collapsed');
-      li.classList.remove('expanded');
-      const t = li.querySelector('.node-toggle');
-      if (t) t.classList.remove('open');
-    }
-  });
+function toggleMindFullscreen() {
+  const container = document.getElementById('mindmapContainer');
+  if (!container) return;
+  if (document.fullscreenElement) {
+    document.exitFullscreen();
+  } else {
+    container.requestFullscreen();
+  }
 }
 
 // ==================== INIT ====================
