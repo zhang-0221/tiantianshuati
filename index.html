@@ -1723,7 +1723,7 @@ document.getElementById('chatInput').addEventListener('input', function() {
 
 // ==================== MIND MAP TAB ====================
 let markmapReady = false, markmapLoading = false;
-const MARKMAP_CDN = 'https://cdn.jsdelivr.net/npm/markmap-view@0.17.0/dist/index.js';
+const MARKMAP_CDN = 'https://esm.sh/markmap-view@0.17.0';
 
 function renderMindList() {
   const examsWithOutline = library.filter(e => e.outline && e.outline.length);
@@ -1772,14 +1772,10 @@ async function loadMarkmap() {
   }
   markmapLoading = true;
   try {
-    await loadScript(MARKMAP_CDN);
-    // Give the script time to initialize
-    await new Promise(r => setTimeout(r, 600));
-    if (window.markmap && window.markmap.Markmap) {
-      markmapReady = true;
-      return true;
-    }
-    throw new Error('markmap init failed');
+    const mod = await import(MARKMAP_CDN);
+    window.markmap = { Markmap: mod.Markmap };
+    markmapReady = true;
+    return true;
   } catch (e) {
     markmapLoading = false;
     return false;
