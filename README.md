@@ -1,4 +1,4 @@
-# 天天刷题
+# 喜刷刷
 
 一个 HTML 文件全搞定的 AI 刷题工具。
 
@@ -16,7 +16,7 @@
 
 ## 使用
 
-1. 双击打开 `天天刷题.html`
+1. 双击打开 `喜刷刷.html`
 2. 点击左下角「API Key」设置你的 DeepSeek API Key（[免费申请](https://platform.deepseek.com/api_keys)）
 3. 上传或粘贴复习资料，点击「AI 生成试卷」
 4. 开始刷题

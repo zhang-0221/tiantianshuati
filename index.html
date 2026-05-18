@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>天天刷题</title>
+<title>喜刷刷</title>
 <style>
 :root {
   --bg: #f5f5f7;
@@ -175,8 +175,7 @@ textarea::placeholder{color:var(--t3)}
 .detail-header{display:flex;align-items:center;gap:10px;margin-bottom:16px}
 .detail-header .btn-back{flex-shrink:0}
 .detail-name-wrap{flex:1;min-width:0}
-.detail-name{font-size:18px;font-weight:700;border:none;background:none;font-family:var(--font);color:var(--text);width:100%;padding:4px 0;outline:none;border-bottom:2px solid transparent;transition:border .15s}
-.detail-name:hover,.detail-name:focus{border-bottom-color:var(--accent)}
+.detail-name-display{font-size:18px;font-weight:700;color:var(--text);line-height:1.4;margin:0}
 .detail-meta{font-size:12px;color:var(--t3);margin-top:4px}
 .detail-stats{display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap}
 .detail-stat{text-align:center;padding:10px 16px;border-radius:var(--rs);background:var(--card);box-shadow:var(--shadow);min-width:60px}
@@ -351,7 +350,7 @@ textarea::placeholder{color:var(--t3)}
 
   <!-- Sidebar -->
   <aside class="sidebar" id="sidebar">
-    <div class="sidebar-brand"><h1>天天刷题</h1></div>
+    <div class="sidebar-brand"><h1>喜刷刷</h1></div>
     <nav class="sidebar-nav">
       <button class="sidebar-item active" id="navImport" onclick="switchTab('import')">
         <span class="si-icon">📥</span>导入
@@ -540,12 +539,15 @@ function renderLib() {
     const d = new Date(e.createdAt);
     const ds = d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate();
     const s = e.summary || { total: e.questions.length, done: 0, correct: 0 };
-    return `<div class="lib-item" onclick="showExamDetail('${e.id}')">
-      <div class="lib-info">
+    return `<div class="lib-item">
+      <div class="lib-info" onclick="showExamDetail('${e.id}')" style="cursor:pointer;">
         <div class="lib-name">${escH(e.name)}</div>
         <div class="lib-meta">${ds} · ${s.total}题 · ${s.done ? s.done+'题已答' : '未开始'}</div>
       </div>
-      <button class="lib-del" onclick="event.stopPropagation();deleteExam('${e.id}')">✕</button></div>`;
+      <div class="lib-actions">
+        <button class="btn btn-s btn-xs" onclick="event.stopPropagation();renameLibExam('${e.id}')" title="重命名">✏️</button>
+        <button class="lib-del" onclick="event.stopPropagation();deleteExam('${e.id}')">✕</button>
+      </div></div>`;
   }).join('');
 }
 
@@ -574,9 +576,9 @@ function showExamDetail(id) {
 
   document.getElementById('detailView').innerHTML = `
     <div class="detail-header">
-      <button class="btn btn-s btn-sm btn-back" onclick="backToLib()">← 返回</button>
+      <button class="btn btn-s btn-sm btn-back" onclick="backToLibFromDetail()">← 返回</button>
       <div class="detail-name-wrap">
-        <input class="detail-name" id="detailName" value="${escH(e.name)}" onchange="renameExam('${e.id}', this.value)">
+        <h2 class="detail-name-display">${escH(e.name)}</h2>
         <div class="detail-meta">${ds} · ${s.total}题</div>
       </div>
     </div>
@@ -672,11 +674,14 @@ function selectMode(id, mode) {
   }
 }
 
-function renameExam(id, newName) {
+function renameLibExam(id) {
   const e = library.find(x => x.id === id); if (!e) return;
-  e.name = newName.trim() || e.name;
+  const newName = prompt('重命名试卷：', e.name);
+  if (newName === null || !newName.trim()) return;
+  e.name = newName.trim();
   saveLib(); renderLib();
   if (activeExam && activeExam.id === id) activeExam.name = e.name;
+  if (detailExamId === id) showExamDetail(id);
 }
 
 // ==================== START PRACTICE ====================
@@ -740,6 +745,11 @@ function showQuizView() {
 function backToLib() {
   if (activeExam) { activeExam.reviewMode = null; saveExam(activeExam.name); showExamDetail(activeExam.id); }
   else { showLibView(); }
+}
+
+function backToLibFromDetail() {
+  if (activeExam) { saveExam(activeExam.name); activeExam = null; }
+  showLibView();
 }
 
 // ==================== FILE UPLOAD ====================
@@ -1288,7 +1298,7 @@ function cutWrongQ(oi) {
 
 // ==================== AI CHAT ====================
 let chatHistory = [];
-const CHAT_SYS = '你是「天天刷题」应用中的AI学习助手。你的职责是帮助用户解答学习中的疑问。回答要求：1.简洁清晰，用中文回答；2.如果用户有学习资料相关的问题，给出准确解答；3.鼓励用户思考，引导式提问；4.回答长度适中，不要过长。';
+const CHAT_SYS = '你是「喜刷刷」应用中的AI学习助手。你的职责是帮助用户解答学习中的疑问。回答要求：1.简洁清晰，用中文回答；2.如果用户有学习资料相关的问题，给出准确解答；3.鼓励用户思考，引导式提问；4.回答长度适中，不要过长。';
 
 function toggleChat() {
   const panel = document.getElementById('chatPanel');
