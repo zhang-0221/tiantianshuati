@@ -7,6 +7,20 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>喜刷刷</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📝</text></svg>">
+<script>
+// Try loading markmap-view; if fails, we fall back to simple HTML tree
+(function() {
+  var s = document.createElement('script');
+  s.src = 'https://cdn.jsdelivr.net/npm/markmap-view@0.18.12/dist/browser/index.js';
+  s.onerror = function() {
+    console.warn('markmap-view CDN failed, will use fallback tree renderer');
+    window._markmapLoaded = false;
+  };
+  s.onload = function() { window._markmapLoaded = true; };
+  document.head.appendChild(s);
+})();
+</script>
 <style>
 :root {
   --bg: #f5f5f7;
@@ -26,6 +40,8 @@
   --amber-l: #fef7e0;
   --purple: #7627bb;
   --purple-l: #f3e8fd;
+  --teal: #0d7377;
+  --teal-l: #e0f7f7;
   --shadow: 0 1px 3px rgba(0,0,0,.06);
   --r: 10px; --rs: 8px;
   --font: -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Segoe UI",sans-serif;
@@ -131,6 +147,7 @@ textarea::placeholder{color:var(--t3)}
 .type-tag{font-size:10px;padding:2px 8px;border-radius:12px;font-weight:600}
 .tag-s{background:var(--accent-l);color:var(--accent)}.tag-m{background:var(--amber-l);color:var(--amber)}
 .tag-h{background:var(--green-l);color:var(--green)}.tag-e{background:var(--purple-l);color:var(--purple)}
+.tag-t{background:var(--teal-l);color:var(--teal)}
 
 .q-text{font-size:15px;line-height:1.8;margin-bottom:16px;white-space:pre-wrap;font-weight:500}
 .options{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
@@ -196,6 +213,129 @@ textarea::placeholder{color:var(--t3)}
 .resume-row{display:flex;gap:8px;margin-top:4px}
 .resume-row .btn{flex:1}
 
+/* ===== Exam Detail White Header ===== */
+.detail-white-header{
+  background:var(--card);border-radius:var(--r);padding:22px 20px 18px;
+  margin-bottom:16px;box-shadow:var(--shadow);position:relative;overflow:hidden;
+}
+.detail-white-header .btn-back{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:7px 14px;border-radius:8px;
+  border:1px solid var(--border);background:var(--bg);
+  color:var(--text);font-size:13px;font-family:var(--font);font-weight:600;
+  cursor:pointer;transition:all .15s;margin-bottom:14px;
+}
+.detail-white-header .btn-back:hover{border-color:var(--accent);color:var(--accent)}
+.detail-white-header .btn-back:active{transform:scale(.97)}
+.detail-header-actions{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.detail-header-actions .btn-rename{
+  display:inline-flex;align-items:center;gap:3px;
+  padding:7px 14px;border-radius:8px;border:1px solid var(--border);
+  background:var(--bg);color:var(--t2);font-size:12px;
+  font-family:var(--font);font-weight:600;cursor:pointer;transition:all .15s;
+}
+.detail-header-actions .btn-rename:hover{border-color:var(--accent);color:var(--accent)}
+.detail-header-actions .btn-rename:active{transform:scale(.97)}
+.detail-white-name{
+  font-size:22px;font-weight:800;line-height:1.35;
+  margin-bottom:4px;letter-spacing:-0.02em;color:var(--text);
+}
+.detail-white-meta{font-size:12px;color:var(--t3);margin-bottom:16px}
+.detail-white-stats{display:flex;gap:8px}
+.detail-white-stat{
+  flex:1;text-align:center;padding:12px 4px 10px;
+  border-radius:10px;background:var(--bg);
+}
+.detail-white-stat .dws-val{font-size:22px;font-weight:700;line-height:1;letter-spacing:-0.01em;color:var(--text)}
+.detail-white-stat .dws-lbl{font-size:10px;color:var(--t3);margin-top:5px;font-weight:500}
+.detail-white-stat.dws-accent{background:var(--accent-l)}
+.detail-white-stat.dws-accent .dws-val{color:var(--accent)}
+
+/* Section */
+.detail-section{margin-bottom:22px}
+.detail-section-title{
+  font-size:15px;font-weight:700;margin-bottom:12px;
+  display:flex;align-items:center;gap:8px;color:var(--text);
+}
+.detail-section-title::before{
+  content:'';width:4px;height:18px;border-radius:2px;
+  background:var(--accent);flex-shrink:0;
+}
+
+/* Collapsible type practice button */
+.type-practice-toggle{
+  display:flex;align-items:center;gap:10px;
+  width:100%;padding:14px 16px;border-radius:var(--r);
+  background:var(--card);box-shadow:var(--shadow);
+  border:1px solid var(--border);cursor:pointer;
+  font-family:var(--font);font-size:14px;font-weight:700;
+  color:var(--text);transition:all .15s;
+}
+.type-practice-toggle:hover{border-color:var(--accent);box-shadow:0 2px 12px rgba(37,99,235,.08)}
+.type-practice-toggle:active{transform:scale(.99)}
+.type-practice-toggle .tpt-icon{font-size:22px;flex-shrink:0}
+.type-practice-toggle .tpt-arrow{font-size:14px;margin-left:auto;transition:transform .25s;color:var(--t3)}
+.type-practice-toggle.open .tpt-arrow{transform:rotate(180deg)}
+.type-practice-grid{display:none;flex-direction:column;gap:8px;margin-top:8px}
+.type-practice-grid.open{display:flex}
+.type-practice-card{
+  display:flex;align-items:center;gap:12px;
+  padding:14px 16px;border-radius:var(--r);
+  background:var(--card);box-shadow:var(--shadow);
+  border-left:4px solid var(--accent);
+  transition:box-shadow .15s,transform .15s;
+}
+.type-practice-card:hover{box-shadow:0 2px 12px rgba(0,0,0,.08)}
+.type-practice-card.tpc-single{border-left-color:var(--accent)}
+.type-practice-card.tpc-multiple{border-left-color:var(--amber)}
+.type-practice-card.tpc-tf{border-left-color:var(--teal)}
+.type-practice-card.tpc-short{border-left-color:var(--green)}
+.type-practice-card.tpc-essay{border-left-color:var(--purple)}
+.type-practice-card-empty{opacity:.5;pointer-events:none}
+.tpc-icon{font-size:28px;flex-shrink:0;width:44px;text-align:center;line-height:1}
+.tpc-info{flex:1;min-width:0}
+.tpc-info .tpc-name{font-size:14px;font-weight:700;color:var(--text)}
+.tpc-info .tpc-meta{font-size:11px;color:var(--t3);margin-top:2px}
+.tpc-info .tpc-prog-track{
+  height:4px;border-radius:2px;background:var(--border);
+  margin-top:6px;overflow:hidden;
+}
+.tpc-info .tpc-prog-fill{height:100%;border-radius:2px;transition:width .3s ease}
+.tpc-actions{display:flex;flex-direction:column;gap:5px;flex-shrink:0;align-items:stretch}
+.tpc-actions .btn{white-space:nowrap;font-size:11px;padding:6px 13px;text-align:center}
+.tpc-actions .btn-continue{background:var(--accent);color:#fff}
+.tpc-actions .btn-continue:hover{background:var(--accent-h)}
+.tpc-actions .btn-restart{background:var(--card);border:1px solid var(--border);color:var(--t2)}
+.tpc-actions .btn-restart:hover{border-color:var(--accent);color:var(--accent)}
+
+/* Merge mode */
+.merge-toolbar{display:none;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.merge-toolbar.show{display:flex}
+.merge-toolbar .merge-count{font-size:13px;font-weight:600;color:var(--accent)}
+.lib-item .merge-check{display:none;width:22px;height:22px;border-radius:6px;border:2px solid var(--border);flex-shrink:0;cursor:pointer;align-items:center;justify-content:center;font-size:13px;transition:all .12s;margin-right:4px}
+.lib-item.merge-mode .merge-check{display:flex}
+.lib-item.merge-mode .lib-del{display:none}
+.lib-item.merge-selected .merge-check{background:var(--accent);border-color:var(--accent);color:#fff}
+.lib-item.merge-selected{border-color:var(--accent);background:var(--accent-l)}
+.lib-item .merge-check::after{content:'✓';display:none}
+.lib-item.merge-selected .merge-check::after{display:block}
+
+/* Responsive */
+@media(max-width:640px){
+  .detail-white-header{border-radius:0;margin:-14px -10px 14px;padding:16px 14px 14px}
+  .detail-white-name{font-size:18px}
+  .detail-white-stats{gap:5px}
+  .detail-white-stat{padding:10px 2px 8px}
+  .detail-white-stat .dws-val{font-size:17px}
+  .detail-white-stat .dws-lbl{font-size:9px}
+  .type-practice-card{flex-wrap:wrap}
+  .tpc-icon{font-size:24px;width:36px}
+  .tpc-actions{flex-direction:row;width:100%;margin-top:8px}
+  .tpc-actions .btn{flex:1}
+  .detail-mode-cards{flex-direction:column}
+  .detail-header-actions{flex-direction:column;align-items:stretch}
+}
+
 /* Toggle Switch */
 .toggle-wrap{display:inline-flex;align-items:center;gap:8px;font-size:11px;color:var(--t3);cursor:pointer;user-select:none}
 .toggle-switch{width:36px;height:20px;border-radius:10px;background:var(--border);cursor:pointer;position:relative;transition:background .2s;flex-shrink:0}
@@ -256,43 +396,133 @@ textarea::placeholder{color:var(--t3)}
 .edit-btn:hover{background:var(--bg);color:var(--accent)}
 
 .mind-header{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.mind-header .btn-back{flex-shrink:0}
 
-/* Custom Mind Map */
+/* Markmap Mind Map */
 .mm-outer{
   background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);
-  overflow:auto;min-height:500px;max-height:80vh;padding:30px;
-  -webkit-overflow-scrolling:touch;
+  position:relative;height:70vh;min-height:500px;overflow:hidden;
 }
-.mm-canvas{display:flex;align-items:flex-start;gap:0;min-width:max-content}
-.mm-root{display:flex;flex-direction:column;gap:12px}
-.mm-node{position:relative;display:flex;align-items:center}
-.mm-node.mm-leaf>.mm-card{cursor:default}
-.mm-node.collapsed>.mm-kids{display:none}
-.mm-kids{display:flex;flex-direction:column;gap:4px;margin-left:0;position:relative;padding-left:28px}
-.mm-kids::before{
-  content:'';position:absolute;left:8px;top:0;bottom:0;
+.mm-outer.fullscreen{height:100vh;max-height:100vh;position:fixed;inset:0;z-index:999;border-radius:0}
+.mm-outer svg{width:100%;height:100%;display:block}
+.mm-outer svg .markmap-node{cursor:pointer;transition:all .15s}
+.mm-outer svg .markmap-node:hover{filter:brightness(.95)}
+.mm-outer svg .markmap-node text{font-family:var(--font);paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round}
+.mm-outer svg .markmap-link{stroke-opacity:.42}
+.mm-toolbar{
+  position:absolute;top:10px;right:10px;z-index:10;display:flex;gap:4px;flex-wrap:wrap;
+}
+.mm-toolbar .btn{font-size:11px;padding:5px 10px;border-radius:6px}
+.mm-search{
+  position:absolute;top:10px;left:10px;z-index:10;
+}
+.mm-search input{
+  padding:6px 12px;border:1px solid var(--border);border-radius:8px;
+  font-size:12px;font-family:var(--font);outline:none;width:180px;
+  background:var(--card);box-shadow:var(--shadow);
+}
+.mm-search input:focus{border-color:var(--accent)}
+.mm-legend{
+  position:absolute;bottom:10px;left:10px;z-index:10;
+  display:flex;gap:12px;font-size:11px;color:var(--t3);
+}
+.mm-legend span{display:flex;align-items:center;gap:4px}
+.mm-legend .dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+
+/* Node Detail Panel */
+.node-detail-panel{
+  position:absolute;bottom:10px;right:10px;z-index:10;
+  background:rgba(255,255,255,.96);border:1px solid var(--border);border-radius:var(--r);
+  padding:16px 18px;max-width:340px;box-shadow:0 14px 42px rgba(15,23,42,.16);
+  display:none;font-size:12px;line-height:1.6;
+  backdrop-filter:blur(10px);
+}
+.node-detail-panel.show{display:block}
+.node-detail-panel .nd-close{position:absolute;top:6px;right:10px;cursor:pointer;font-size:16px;color:var(--t3);border:none;background:none}
+.node-detail-panel .nd-title{font-size:15px;font-weight:800;margin-bottom:4px;padding-right:18px;color:var(--text)}
+.node-detail-panel .nd-desc{color:var(--t2);margin-bottom:8px;font-size:12px}
+.node-detail-panel .nd-kps{font-size:12px;color:var(--t2);margin-bottom:8px;background:var(--bg);border-radius:8px;padding:8px 10px}
+.node-detail-panel .nd-kps ul{margin:4px 0 0 14px;padding:0}
+.node-detail-panel .nd-kps li{margin-bottom:2px}
+.node-detail-panel .nd-stats{display:flex;gap:8px;margin:10px 0;font-size:11px}
+.node-detail-panel .nd-stat{text-align:center;background:var(--bg);border-radius:8px;padding:7px 9px;min-width:58px}
+.node-detail-panel .nd-stat .nds-val{font-size:16px;font-weight:700}
+.node-detail-panel .nd-stat .nds-lbl{color:var(--t3);font-size:10px}
+.node-detail-panel .nd-btn{width:100%;margin-top:4px;font-size:12px}
+
+/* Fallback HTML tree (when markmap CDN unavailable) */
+.mm-tree-wrap{
+  width:100%;height:100%;overflow:auto;padding:28px 18px 70px;
+  font-family:var(--font);font-size:13px;line-height:1.8;
+}
+.mm-tree-wrap ul{list-style:none;padding-left:28px;margin:0}
+.mm-tree-wrap li{position:relative;padding:4px 0}
+.mm-tree-wrap li::before{
+  content:'';position:absolute;left:-17px;top:0;bottom:0;
   width:2px;background:var(--border);border-radius:1px;
 }
-.mm-card{
-  flex-shrink:0;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;
-  font-family:var(--font);cursor:pointer;user-select:none;transition:all .12s;
-  white-space:nowrap;position:relative;max-width:200px;overflow:hidden;text-overflow:ellipsis;
+.mm-tree-wrap li::after{
+  content:'';position:absolute;left:-17px;top:17px;width:15px;height:2px;background:var(--border);border-radius:1px;
 }
-.mm-card::after{
-  content:'';display:none;position:absolute;right:-13px;top:50%;transform:translateY(-50%);
-  width:10px;height:2px;background:var(--border);
+.mm-tree-wrap li:last-child::before{height:10px}
+.mm-tree-wrap .mt-node{
+  display:inline-flex;align-items:center;gap:6px;padding:5px 12px;
+  border-radius:8px;cursor:pointer;transition:all .12s;
+  font-weight:700;white-space:nowrap;max-width:280px;
+  overflow:hidden;text-overflow:ellipsis;
 }
-.mm-node:not(.mm-leaf)>.mm-card::after{display:block}
-.mm-depth-0{background:var(--accent);color:#fff;font-size:15px;font-weight:700;padding:10px 20px;box-shadow:0 2px 8px rgba(37,99,235,.25)}
-.mm-depth-1{background:var(--accent-l);color:var(--accent);border:1.5px solid var(--accent);box-shadow:0 1px 4px rgba(37,99,235,.08)}
-.mm-depth-2{background:var(--card);color:var(--text);border:1.5px solid var(--border);box-shadow:var(--shadow)}
-.mm-depth-3,.mm-depth-4{background:var(--bg);color:var(--t2);border:1px solid var(--border);font-size:12px;font-weight:400}
-.mm-card:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.1)}
-.mm-depth-0:hover{box-shadow:0 4px 16px rgba(37,99,235,.35)}
-.mm-node.mm-has-kids>.mm-card::before{
-  content:'';position:absolute;right:-4px;top:50%;
-  width:8px;height:8px;border-radius:50%;background:var(--accent);
-  transform:translateY(-50%);transition:all .15s;
+.mm-tree-wrap .mt-node:hover{transform:translateY(-1px);box-shadow:0 3px 10px rgba(15,23,42,.08)}
+.mm-tree-wrap .mt-toggle{
+  cursor:pointer;font-size:10px;color:var(--t3);width:14px;
+  text-align:center;flex-shrink:0;user-select:none;
+}
+.mm-tree-wrap .mt-desc{font-size:11px;color:var(--t3);font-weight:500;margin-left:6px}
+.mm-tree-wrap .mt-kps{font-size:10px;color:var(--t2);margin-left:4px}
+.mm-tree-wrap .mt-count{font-size:10px;color:inherit;opacity:.72;margin-left:2px}
+.mm-tree-wrap .mt-l0{background:#111827;color:#fff;font-size:14px;padding:7px 16px;box-shadow:0 5px 18px rgba(17,24,39,.18)}
+.mm-tree-wrap .mt-l1{background:var(--accent-l);color:var(--accent);border:1px solid rgba(37,99,235,.35)}
+.mm-tree-wrap .mt-l2{background:var(--card);color:var(--text);border:1px solid var(--border)}
+.mm-tree-wrap .mt-l3,.mt-l4{background:var(--bg);color:var(--t2);border:1px solid var(--border);font-size:12px;font-weight:600}
+
+/* Progress Float */
+.prog-float{
+  position:fixed;bottom:20px;right:20px;z-index:400;
+  background:var(--card);border-radius:14px;padding:14px 18px;
+  box-shadow:0 4px 24px rgba(0,0,0,.12);cursor:pointer;
+  display:flex;align-items:center;gap:12px;transition:all .2s;
+  border:1px solid var(--border);user-select:none;
+}
+.prog-float:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,0,0,.16)}
+.prog-float:active{transform:scale(.97)}
+.prog-float .pf-icon{font-size:24px}
+.prog-float .pf-info{text-align:left}
+.prog-float .pf-val{font-size:15px;font-weight:700;color:var(--text)}
+.prog-float .pf-label{font-size:10px;color:var(--t3);margin-top:1px}
+
+/* Progress Detail */
+.prog-detail-modal{max-width:460px;max-height:90vh;overflow-y:auto}
+.prog-detail-modal .pd-stats{display:flex;gap:8px;margin-bottom:14px}
+.prog-detail-modal .pd-stat{flex:1;text-align:center;padding:12px 8px;border-radius:var(--rs);background:var(--bg)}
+.prog-detail-modal .pd-stat .pds-big{font-size:22px;font-weight:700;color:var(--text)}
+.prog-detail-modal .pd-stat .pds-lbl{font-size:10px;color:var(--t3);margin-top:2px}
+.prog-detail-modal .pd-section{margin-top:14px}
+.prog-detail-modal .pd-section .pd-sh{font-size:12px;font-weight:700;color:var(--t2);margin-bottom:8px}
+.chart-row{display:flex;align-items:flex-end;gap:8px;height:100px;padding-top:4px}
+.chart-col{flex:1;display:flex;flex-direction:column;align-items:center;height:100%}
+.chart-bar-wrap{flex:1;width:100%;display:flex;align-items:flex-end}
+.chart-bar{width:100%;border-radius:4px 4px 0 0;background:var(--accent);min-height:3px;transition:height .3s ease}
+.chart-label{font-size:9px;color:var(--t3);margin-top:4px}
+.chart-rate{font-size:9px;color:var(--t2);font-weight:600;margin-bottom:2px}
+.type-acc-row{display:flex;flex-direction:column;gap:6px}
+.type-acc-item{display:flex;align-items:center;gap:8px;font-size:12px}
+.type-acc-item .ta-tag{width:40px;font-size:10px;padding:2px 6px;border-radius:10px;text-align:center;font-weight:600;flex-shrink:0}
+.type-acc-item .ta-bar-wrap{flex:1;height:8px;border-radius:4px;background:var(--border);overflow:hidden}
+.type-acc-item .ta-bar{height:100%;border-radius:4px;transition:width .3s ease}
+.type-acc-item .ta-pct{width:40px;text-align:right;font-weight:600;flex-shrink:0;color:var(--t2)}
+@media(max-width:640px){
+  .prog-float{bottom:12px;right:12px;padding:10px 14px;gap:8px;border-radius:12px}
+  .prog-float .pf-icon{font-size:20px}
+  .prog-float .pf-val{font-size:13px}
 }
 .mm-node.collapsed>.mm-card::before{background:var(--t3)}
 .mm-node.expanded>.mm-card{z-index:1}
@@ -338,11 +568,6 @@ textarea::placeholder{color:var(--t3)}
   .prog-float .pf-val{font-size:13px}
 }
 .mind-header .btn-back{flex-shrink:0}
-.mind-detail-card{background:var(--card);border-radius:var(--r);padding:20px;box-shadow:var(--shadow)}
-.mind-detail-card .mind-title{font-size:18px;font-weight:700;margin-bottom:4px}
-.mind-detail-card .mind-meta{font-size:12px;color:var(--t3);margin-bottom:16px}
-.mind-expand-all{display:flex;gap:6px;margin-bottom:12px}
-.mind-expand-all .btn{font-size:11px;padding:5px 10px}
 
 /* AI Chat Panel */
 .chat-toggle{
@@ -491,9 +716,9 @@ textarea::placeholder{color:var(--t3)}
         <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
           <div class="up-icon">📄</div>
           <div class="up-text">点击上传或拖拽文件</div>
-          <div class="up-hint">支持 .txt / .md / .docx</div>
+          <div class="up-hint">支持 .txt / .md / .docx / .pdf</div>
         </div>
-        <input type="file" id="fileInput" accept=".txt,.md,.docx" style="display:none" onchange="handleFile(this)">
+        <input type="file" id="fileInput" accept=".txt,.md,.docx,.pdf" style="display:none" onchange="handleFile(this)">
         <div id="fileBadge" style="display:none;"></div>
         <div class="divider">或者粘贴文本</div>
         <textarea id="materialInput" placeholder="粘贴复习资料……&#10;换行分隔不同知识点效果更好"></textarea>
@@ -511,7 +736,19 @@ textarea::placeholder{color:var(--t3)}
     <div class="tab-content" id="tabLibrary">
       <!-- 子视图：题库列表 -->
       <div id="libView">
-        <div class="card-hd" style="margin-bottom:12px;">📚 我的题库 <span class="card-tag" id="libCount"></span></div>
+        <div class="card-hd" style="margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span>📚 我的题库 <span class="card-tag" id="libCount"></span></span>
+          <button class="btn btn-s btn-xs" onclick="exportLibrary()" title="导出题库到文件，可跨设备导入">📤 导出</button>
+          <button class="btn btn-s btn-xs" onclick="document.getElementById('importFileInput').click()" title="从导出的文件恢复题库">📥 导入</button>
+          <input type="file" id="importFileInput" accept=".json" style="display:none" onchange="importLibrary(this)">
+          <button class="btn btn-s btn-xs" onclick="showSyncModal()" title="生成同步码，手机输入即可同步">☁️ 同步</button>
+          <button class="btn btn-s btn-xs" id="mergeBtn" onclick="toggleMergeMode()" style="margin-left:auto;" title="勾选多份试卷合并为一份">📦 合并</button>
+        </div>
+        <div class="merge-toolbar" id="mergeToolbar">
+          <span class="merge-count" id="mergeCount">已选 0 份</span>
+          <button class="btn btn-p btn-xs" id="mergeDoBtn" onclick="doMerge()" disabled style="flex:0;">合并选中试卷</button>
+          <button class="btn btn-s btn-xs" onclick="toggleMergeMode()" style="flex:0;">取消</button>
+        </div>
         <div class="lib-list" id="libGrid"></div>
         <div class="empty-state" id="libEmpty">还没有试卷，导入资料后生成一份吧</div>
       </div>
@@ -560,9 +797,64 @@ textarea::placeholder{color:var(--t3)}
   <div class="modal edit-modal">
     <h3>✏️ 编辑题目</h3>
     <div id="editContent"></div>
+    <div class="modal-btns" style="justify-content:space-between;">
+      <button class="btn btn-sm" onclick="deleteQuestion()" style="background:none;border:1px solid var(--red);color:var(--red);">🗑 删除此题</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-s btn-sm" onclick="closeEditModal()">取消</button>
+        <button class="btn btn-p btn-sm" onclick="saveQuestionEdit()">保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Merge Confirm Modal -->
+<div class="modal-overlay hidden" id="mergeModal">
+  <div class="modal">
+    <h3>📦 合并试卷</h3>
+    <p id="mergeModalDesc">将选中的试卷题目合并为一份新试卷，题目内容不变。</p>
+    <div class="modal-btns" style="justify-content:center;flex-wrap:wrap;">
+      <button class="btn btn-s btn-sm" onclick="closeMergeModal()">取消</button>
+      <button class="btn btn-p btn-sm" id="mergeKeepBtn" onclick="confirmMerge(true)">合并，保留原试卷</button>
+      <button class="btn btn-s btn-sm" id="mergeDeleteBtn" onclick="confirmMerge(false)" style="background:var(--red-l);color:var(--red);border-color:var(--red-l);">合并后删除原试卷</button>
+    </div>
+  </div>
+</div>
+
+<!-- Progress Detail Modal -->
+<div class="modal-overlay hidden" id="progressModal">
+  <div class="modal prog-detail-modal">
+    <h3>📊 学习进度</h3>
+    <div class="pd-stats">
+      <div class="pd-stat"><div class="pds-big" id="pdTotal">0</div><div class="pds-lbl">累计刷题</div></div>
+      <div class="pd-stat"><div class="pds-big" id="pdRate">--%</div><div class="pds-lbl">累计正确率</div></div>
+    </div>
+    <div class="pd-section">
+      <div class="pd-sh">近7天刷题</div>
+      <div class="chart-row" id="chartRow"></div>
+    </div>
+    <div class="pd-section">
+      <div class="pd-sh">各题型正确率</div>
+      <div class="type-acc-row" id="typeAccRow"></div>
+    </div>
+    <div class="modal-btns" style="margin-top:14px;">
+      <button class="btn btn-s btn-sm" onclick="closeProgressDetail()">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- Sync Modal -->
+<div class="modal-overlay hidden" id="syncModal">
+  <div class="modal" style="max-width:420px;">
+    <h3>☁️ 跨设备同步</h3>
+    <p style="font-size:13px;color:var(--t2);margin-bottom:12px;">将题库编码为文本，通过微信/QQ等发送到另一台设备，粘贴即可导入。</p>
+    <div style="margin-bottom:12px;display:flex;gap:8px;">
+      <button class="btn btn-p btn-sm" id="syncExportBtn" onclick="syncExportText()" style="flex:1;">📤 复制同步文本</button>
+      <button class="btn btn-s btn-sm" id="syncPullBtn2" onclick="syncPullViaText()" style="flex:1;">📥 粘贴同步文本</button>
+    </div>
+    <textarea id="syncTextArea" placeholder="同步文本会显示在这里..." readonly style="display:none;width:100%;height:80px;font-size:10px;font-family:monospace;word-break:break-all;resize:vertical;padding:8px;border:1px solid var(--border);border-radius:var(--rs);margin-bottom:8px;"></textarea>
+    <div id="syncTextStatus" style="text-align:center;font-size:12px;"></div>
     <div class="modal-btns">
-      <button class="btn btn-s btn-sm" onclick="closeEditModal()">取消</button>
-      <button class="btn btn-p btn-sm" onclick="saveQuestionEdit()">保存</button>
+      <button class="btn btn-s btn-sm" onclick="closeSyncModal()">关闭</button>
     </div>
   </div>
 </div>
@@ -640,6 +932,16 @@ const MAMMOTH_CDNS = [
   'https://unpkg.com/mammoth@1.8.0/mammoth.browser.min.js',
   'https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js'
 ];
+const PDFJS_CDNS = [
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
+  'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js',
+  'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js'
+];
+const PDFJS_WORKER_CDNS = [
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js',
+  'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js',
+  'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js'
+];
 
 let apiKey = localStorage.getItem(LS_KEY) || '';
 let library = [];
@@ -647,6 +949,8 @@ let activeExam = null;
 let filteredQuestions = [];
 let currentIndex = 0;
 let autoAdvance = true;
+let mergeMode = false;
+let mergeSelected = new Set();
 
 // ==================== TOAST ====================
 function toast(msg, type) {
@@ -673,6 +977,15 @@ function switchTab(tab) {
   document.getElementById('navLib').classList.toggle('active', tab === 'library');
   document.getElementById('navMind').classList.toggle('active', tab === 'mindmap');
   if (tab === 'mindmap') renderMindList();
+  // Exit merge mode when leaving library tab
+  if (tab !== 'library' && mergeMode) {
+    mergeMode = false; mergeSelected.clear();
+    document.getElementById('mergeToolbar').classList.remove('show');
+    document.getElementById('mergeBtn').textContent = '📦 合并试卷';
+    document.getElementById('mergeBtn').style.background = '';
+    document.getElementById('mergeBtn').style.color = '';
+    document.getElementById('mergeBtn').style.borderColor = '';
+  }
   // Close mobile sidebar after switching tab
   if (window.innerWidth <= 640) { document.getElementById('sidebar').classList.remove('open'); document.getElementById('hamburger').textContent = '☰'; }
 }
@@ -714,6 +1027,8 @@ function saveExam(name) {
   if (idx >= 0) library[idx] = data; else library.push(data);
   if (library.length > 50) library = library.slice(-50);
   saveLib(); renderLib();
+  // Refresh mind map if open (quiz results → mind map feedback)
+  if (currentMindExamId) refreshMindMap();
 }
 
 function deleteExam(id) {
@@ -722,26 +1037,231 @@ function deleteExam(id) {
   if (activeExam && activeExam.id === id) { activeExam = null; showLibView(); }
 }
 
+// ==================== MERGE EXAMS ====================
+function toggleMergeMode() {
+  mergeMode = !mergeMode;
+  mergeSelected.clear();
+  document.getElementById('mergeToolbar').classList.toggle('show', mergeMode);
+  document.getElementById('mergeBtn').textContent = mergeMode ? '✕ 取消合并' : '📦 合并试卷';
+  document.getElementById('mergeBtn').style.background = mergeMode ? 'var(--red-l)' : '';
+  document.getElementById('mergeBtn').style.color = mergeMode ? 'var(--red)' : '';
+  document.getElementById('mergeBtn').style.borderColor = mergeMode ? 'var(--red)' : '';
+  renderLib();
+}
+
+function toggleMergeSelect(id, el) {
+  if (mergeSelected.has(id)) { mergeSelected.delete(id); }
+  else { mergeSelected.add(id); }
+  el.classList.toggle('merge-selected', mergeSelected.has(id));
+  updateMergeUI();
+}
+
+function updateMergeUI() {
+  const countEl = document.getElementById('mergeCount');
+  const btnEl = document.getElementById('mergeDoBtn');
+  if (countEl) countEl.textContent = '已选 ' + mergeSelected.size + ' 份';
+  if (btnEl) btnEl.disabled = mergeSelected.size < 2;
+}
+
+function doMerge() {
+  if (mergeSelected.size < 2) { toast('请至少勾选 2 份试卷', 'err'); return; }
+  const selected = library.filter(e => mergeSelected.has(e.id));
+  const names = selected.map(e => '"' + e.name + '"').join('、');
+  const totalQ = selected.reduce((sum, e) => sum + e.questions.length, 0);
+  document.getElementById('mergeModalDesc').innerHTML = '将合并以下 <b>' + mergeSelected.size + '</b> 份试卷，共 <b>' + totalQ + '</b> 题：<br><span style="font-size:12px;color:var(--t3);">' + names + '</span><br><br>题目内容不变，仅简单合并。';
+  document.getElementById('mergeModal').classList.remove('hidden');
+}
+
+function closeMergeModal() {
+  document.getElementById('mergeModal').classList.add('hidden');
+}
+
+function confirmMerge(keepOriginals) {
+  const selected = library.filter(e => mergeSelected.has(e.id));
+  if (selected.length < 2) return;
+
+  // Re-index all question IDs to avoid collisions
+  let allQuestions = [];
+  for (const e of selected) {
+    const qs = JSON.parse(JSON.stringify(e.questions));
+    for (let i = 0; i < qs.length; i++) {
+      qs[i].id = allQuestions.length + i;
+    }
+    allQuestions = allQuestions.concat(qs);
+  }
+
+  const now = new Date();
+  const mergedName = '合并试卷 · ' + now.getFullYear()+'/'+(now.getMonth()+1)+'/'+now.getDate()+' '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+  const mergedExam = {
+    id: 'ex_' + Date.now(),
+    name: mergedName,
+    createdAt: now.toISOString(),
+    questions: allQuestions,
+    outline: null,
+    userAnswers: {},
+    isSubmitted: {},
+    isCorrect: {},
+    cutWrong: {},
+    summary: { total: allQuestions.length, done: 0, correct: 0 }
+  };
+
+  library.push(mergedExam);
+
+  if (!keepOriginals) {
+    library = library.filter(e => !mergeSelected.has(e.id));
+    if (activeExam && mergeSelected.has(activeExam.id)) { activeExam = null; showLibView(); }
+  }
+
+  saveLib();
+  mergeMode = false; mergeSelected.clear();
+  document.getElementById('mergeToolbar').classList.remove('show');
+  document.getElementById('mergeBtn').textContent = '📦 合并试卷';
+  document.getElementById('mergeBtn').style.background = '';
+  document.getElementById('mergeBtn').style.color = '';
+  document.getElementById('mergeBtn').style.borderColor = '';
+  renderLib();
+  closeMergeModal();
+  toast('已合并 ' + selected.length + ' 份试卷，共 ' + allQuestions.length + ' 题 · ' + (keepOriginals ? '已保留原试卷' : '已删除原试卷'), 'ok');
+}
+
+// ==================== EXPORT / IMPORT ====================
+function exportLibrary() {
+  if (library.length === 0) { toast('题库为空，无需导出', 'err'); return; }
+  const data = JSON.stringify(library, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const a = document.createElement('a');
+  const now = new Date();
+  const ds = now.getFullYear()+'-'+(now.getMonth()+1)+'-'+now.getDate();
+  a.href = URL.createObjectURL(blob);
+  a.download = '喜刷刷题库_' + ds + '.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('已导出 ' + library.length + ' 份试卷', 'ok');
+}
+
+function importLibrary(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function() {
+    try {
+      const data = JSON.parse(reader.result);
+      if (!Array.isArray(data)) { toast('文件格式错误，需要题库数组', 'err'); return; }
+      let added = 0, skipped = 0;
+      for (const e of data) {
+        if (!e.id || !e.questions || !Array.isArray(e.questions)) { skipped++; continue; }
+        // 跳过已存在的试卷（按id去重）
+        if (library.some(x => x.id === e.id)) { skipped++; continue; }
+        // 确保有所有必需的字段
+        if (!e.userAnswers) e.userAnswers = {};
+        if (!e.isSubmitted) e.isSubmitted = {};
+        if (!e.isCorrect) e.isCorrect = {};
+        if (!e.cutWrong) e.cutWrong = {};
+        if (!e.summary) e.summary = { total: e.questions.length, done: 0, correct: 0 };
+        library.push(e);
+        added++;
+      }
+      // 限制总量
+      if (library.length > 50) library = library.slice(-50);
+      saveLib(); renderLib();
+      toast('导入 ' + added + ' 份' + (skipped > 0 ? '，跳过 ' + skipped + ' 份（重复或无效）' : ''), 'ok');
+    } catch (e) {
+      toast('文件解析失败，请检查格式', 'err');
+    }
+  };
+  reader.readAsText(file);
+  input.value = '';
+}
+
+// ==================== CROSS-DEVICE SYNC (TEXT-BASED) ====================
+function showSyncModal() {
+  document.getElementById('syncTextStatus').innerHTML = '';
+  document.getElementById('syncTextArea').value = '';
+  document.getElementById('syncTextArea').style.display = 'none';
+  document.getElementById('syncModal').classList.remove('hidden');
+}
+
+function closeSyncModal() {
+  document.getElementById('syncModal').classList.add('hidden');
+}
+
+function syncExportText() {
+  if (library.length === 0) { toast('题库为空，无需同步', 'err'); return; }
+  const json = JSON.stringify(library);
+  const encoded = btoa(unescape(encodeURIComponent(json)));
+  const textArea = document.getElementById('syncTextArea');
+  textArea.style.display = 'block';
+  textArea.value = encoded;
+  textArea.select();
+  try {
+    navigator.clipboard.writeText(encoded);
+    document.getElementById('syncTextStatus').innerHTML = '<div class="msg ok">已复制！粘贴到微信发给另一台设备</div><div style="font-size:11px;color:var(--t3);margin-top:4px;">共 ' + library.length + ' 份试卷 · ' + Math.round(encoded.length/1024) + 'KB</div>';
+  } catch (e) {
+    document.getElementById('syncTextStatus').innerHTML = '<div class="msg ok">请手动复制上方文本</div>';
+  }
+}
+
+function syncPullViaText() {
+  const encoded = prompt('请在另一台设备上点击「复制同步文本」，将文本粘贴到这里：');
+  if (!encoded || !encoded.trim()) return;
+  try {
+    const json = decodeURIComponent(escape(atob(encoded.trim())));
+    const data = JSON.parse(json);
+    if (!Array.isArray(data)) { document.getElementById('syncTextStatus').innerHTML = '<div class="msg err">格式错误</div>'; return; }
+    let added = 0, skipped = 0;
+    for (const e of data) {
+      if (!e.id || !e.questions || !Array.isArray(e.questions)) { skipped++; continue; }
+      if (library.some(x => x.id === e.id)) { skipped++; continue; }
+      if (!e.userAnswers) e.userAnswers = {};
+      if (!e.isSubmitted) e.isSubmitted = {};
+      if (!e.isCorrect) e.isCorrect = {};
+      if (!e.cutWrong) e.cutWrong = {};
+      if (!e.summary) e.summary = { total: e.questions.length, done: 0, correct: 0 };
+      library.push(e);
+      added++;
+    }
+    if (library.length > 50) library = library.slice(-50);
+    saveLib(); renderLib();
+    document.getElementById('syncTextStatus').innerHTML = '<div class="msg ok">导入成功！新增 ' + added + ' 份' + (skipped > 0 ? '，跳过 ' + skipped + ' 份（重复）' : '') + '</div>';
+    document.getElementById('syncTextArea').value = '';
+    document.getElementById('syncTextArea').style.display = 'none';
+  } catch (e) {
+    document.getElementById('syncTextStatus').innerHTML = '<div class="msg err">文本格式错误，请确认完整粘贴</div>';
+  }
+}
+
+// ==================== TYPE PRACTICE TOGGLE ====================
+function toggleTypePractice() {
+  const grid = document.getElementById('typePracticeGrid');
+  const toggle = document.getElementById('typePracticeToggle');
+  grid.classList.toggle('open');
+  toggle.classList.toggle('open');
+}
+
 // ==================== LIBRARY RENDER ====================
 function renderLib() {
   const grid = document.getElementById('libGrid'), empty = document.getElementById('libEmpty');
   if (library.length === 0) { grid.innerHTML = ''; empty.style.display = 'block'; document.getElementById('libCount').textContent = ''; return; }
   empty.style.display = 'none';
   document.getElementById('libCount').textContent = library.length + ' 份试卷';
+  const mergeM = mergeMode;
   grid.innerHTML = library.map((e, idx) => {
     const d = new Date(e.createdAt);
     const ds = d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate();
     const s = e.summary || { total: e.questions.length, done: 0, correct: 0 };
-    return `<div class="lib-item">
-      <div class="lib-info" onclick="showExamDetail('${e.id}')" style="cursor:pointer;">
+    const isSel = mergeSelected.has(e.id);
+    return `<div class="lib-item${mergeM ? ' merge-mode' : ''}${isSel ? ' merge-selected' : ''}" onclick="${mergeM ? `toggleMergeSelect('${e.id}', this)` : `showExamDetail('${e.id}')`}" style="cursor:pointer;">
+      <div class="merge-check">✓</div>
+      <div class="lib-info">
         <div class="lib-name">${escH(e.name)}</div>
         <div class="lib-meta">${ds} · ${s.total}题 · ${s.done ? s.done+'题已答' : '未开始'}</div>
       </div>
       <div class="lib-actions">
-        <button class="btn btn-s btn-xs" onclick="event.stopPropagation();renameLibExam('${e.id}')" title="重命名">✏️</button>
-        <button class="lib-del" onclick="event.stopPropagation();deleteExam('${e.id}')">✕</button>
+        ${mergeM ? '' : `<button class="btn btn-s btn-xs" onclick="event.stopPropagation();renameLibExam('${e.id}')" title="重命名">✏️</button>
+        <button class="lib-del" onclick="event.stopPropagation();deleteExam('${e.id}')">✕</button>`}
       </div></div>`;
   }).join('');
+  updateMergeUI();
 }
 
 // ==================== EXAM DETAIL VIEW ====================
@@ -766,68 +1286,134 @@ function showExamDetail(id) {
   document.getElementById('quizView').style.display = 'none';
 
   document.getElementById('detailView').innerHTML = `
-    <div class="detail-header">
-      <button class="btn btn-s btn-sm btn-back" onclick="backToLibFromDetail()">← 返回</button>
-      <div class="detail-name-wrap">
-        <h2 class="detail-name-display">${escH(e.name)}</h2>
-        <div class="detail-meta">${ds} · ${s.total}题</div>
+    <!-- White Header -->
+    <div class="detail-white-header">
+      <div class="detail-header-actions">
+        <button class="btn-back" onclick="backToLibFromDetail()">← 返回题库</button>
+        <button class="btn-rename" onclick="event.stopPropagation();renameLibExam('${e.id}')">✏️ 重命名</button>
+      </div>
+      <h2 class="detail-white-name">${escH(e.name)}</h2>
+      <div class="detail-white-meta">${ds} · ${s.total}题</div>
+      <div class="detail-white-stats">
+        <div class="detail-white-stat"><div class="dws-val">${s.total}</div><div class="dws-lbl">总题</div></div>
+        <div class="detail-white-stat"><div class="dws-val">${s.done}</div><div class="dws-lbl">已答</div></div>
+        <div class="detail-white-stat"><div class="dws-val">${s.correct}</div><div class="dws-lbl">正确</div></div>
+        <div class="detail-white-stat dws-accent"><div class="dws-val">${s.done > 0 ? Math.round(s.correct / s.done * 100) + '%' : '--'}</div><div class="dws-lbl">正确率</div></div>
       </div>
     </div>
-    <div class="detail-stats">
-      <div class="detail-stat"><div class="dsv">${s.total}</div><div class="dsl">总题</div></div>
-      <div class="detail-stat"><div class="dsv" style="color:var(--accent);">${s.done}</div><div class="dsl">已答</div></div>
-      <div class="detail-stat"><div class="dsv" style="color:var(--green);">${s.correct}</div><div class="dsl">正确</div></div>
-      <div class="detail-stat"><div class="dsv" style="color:var(--red);">${wrongRemain}</div><div class="dsl">剩余错题</div></div>
-    </div>
-    <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;" id="typeQuickRow">
-      ${(() => {
-        const typeLabels = {single:'单选',multiple:'多选',short:'简答',essay:'论述'};
-        const typeIcons = {single:'🔘',multiple:'☑️',short:'📝',essay:'📄'};
-        const counts = {};
-        for (const q of e.questions) { counts[q.type] = (counts[q.type] || 0) + 1; }
-        return Object.entries(typeLabels).map(([k, v]) => {
-          const n = counts[k] || 0;
-          return `<button class="btn btn-s btn-xs" onclick="event.stopPropagation();startTypePractice('${e.id}','${k}')" style="flex:1;min-width:0;${n===0?'opacity:.4;pointer-events:none;':''}" title="按${v}刷题">${typeIcons[k]} ${v} · ${n}</button>`;
-        }).join('');
-      })()}
-    </div>
-    <div class="mode-row">
-      <div class="mode-btn" onclick="selectMode('${e.id}', 'sequential')" id="modeSeq">
-        <div class="mode-icon">📖</div>
-        <div class="mode-label">顺序练习</div>
-        <div class="mode-hint">按题目顺序作答</div>
+
+    <!-- Content Area -->
+    <div class="detail-content-wrap">
+      <div class="detail-section">
+        <button class="type-practice-toggle" onclick="toggleTypePractice()" id="typePracticeToggle">
+          <span class="tpt-icon">📋</span> 按题型刷
+          <span class="tpt-arrow">▼</span>
+        </button>
+        <div class="type-practice-grid" id="typePracticeGrid">
+          ${(() => {
+            const typeLabels = {single:'单选题', multiple:'多选题', tf:'判断题', short:'简答题', essay:'论述题'};
+            const typeIcons  = {single:'🔘', multiple:'☑️', tf:'✅', short:'📝', essay:'📄'};
+            const typeCss    = {single:'tpc-single', multiple:'tpc-multiple', tf:'tpc-tf', short:'tpc-short', essay:'tpc-essay'};
+            const typeColors = {single:'var(--accent)', multiple:'var(--amber)', tf:'var(--teal)', short:'var(--green)', essay:'var(--purple)'};
+            return Object.entries(typeLabels).map(([k, v]) => {
+              const typeQs = e.questions.filter(q => q.type === k);
+              const n = typeQs.length;
+              const done = typeQs.filter(q => submitted[q.id]).length;
+              const progPct = n > 0 ? Math.round(done / n * 100) : 0;
+              const hasProgress = done > 0;
+              const isEmpty = n === 0;
+              return `
+                <div class="type-practice-card ${typeCss[k]}${isEmpty ? ' type-practice-card-empty' : ''}">
+                  <div class="tpc-icon">${typeIcons[k]}</div>
+                  <div class="tpc-info">
+                    <div class="tpc-name">${v}</div>
+                    <div class="tpc-meta">${isEmpty ? '暂无题目' : n + ' 题' + (done > 0 ? ' · 已答 ' + done + ' 题' : ' · 未开始')}</div>
+                    ${n > 0 ? '<div class="tpc-prog-track"><div class="tpc-prog-fill" style="width:' + progPct + '%;background:' + typeColors[k] + ';"></div></div>' : ''}
+                  </div>
+                  ${!isEmpty ? `
+                  <div class="tpc-actions">
+                    <button class="btn btn-continue" onclick="event.stopPropagation();startTypePracticeWithOptions('${e.id}','${k}',false)" title="${hasProgress ? '从上次位置继续' : '开始练习'}">${hasProgress ? '选择接着做题' : '开始练习'}</button>
+                    ${hasProgress ? '<button class="btn btn-restart" onclick="event.stopPropagation();startTypePracticeWithOptions(\'' + e.id + '\',\'' + k + '\',true)" title="清除该题型进度，重新开始">重新开始</button>' : ''}
+                  </div>` : ''}
+                </div>`;
+            }).join('');
+          })()}
+        </div>
       </div>
-      <div class="mode-btn" onclick="selectMode('${e.id}', 'random')" id="modeRand">
-        <div class="mode-icon">🔀</div>
-        <div class="mode-label">随机练习</div>
-        <div class="mode-hint">打乱题目顺序</div>
-      </div>
-    </div>
-    <div class="mode-row">
-      <div class="mode-btn wrong-mode" onclick="startPractice('${e.id}', 'wrong', false)" style="flex:0 0 100%;${wrongRemain === 0 ? 'opacity:0.5;pointer-events:none;' : ''}">
-        <div class="mode-icon">📝</div>
-        <div class="mode-label">错题集 · ${wrongRemain}</div>
-        <div class="mode-hint">${wrongRemain > 0 ? '只看答错的题，可斩题' : '暂无错题，答题后自动更新'}</div>
+
+      <div class="detail-section">
+        <div class="detail-section-title">练习模式</div>
+        <div class="mode-row">
+          <div class="mode-btn" onclick="selectMode('${e.id}', 'sequential')" id="modeSeq">
+            <div class="mode-icon">📖</div>
+            <div class="mode-label">顺序练习</div>
+            <div class="mode-hint">按题目顺序作答</div>
+          </div>
+          <div class="mode-btn" onclick="selectMode('${e.id}', 'random')" id="modeRand">
+            <div class="mode-icon">🔀</div>
+            <div class="mode-label">随机练习</div>
+            <div class="mode-hint">打乱题目顺序</div>
+          </div>
+        </div>
+        <div class="mode-row" style="margin-top:10px;">
+          <div class="mode-btn wrong-mode" onclick="startPractice('${e.id}', 'wrong', false)" style="flex:0 0 100%;${wrongRemain === 0 ? 'opacity:0.5;pointer-events:none;' : ''}">
+            <div class="mode-icon">📝</div>
+            <div class="mode-label">错题集 · ${wrongRemain}</div>
+            <div class="mode-hint">${wrongRemain > 0 ? '只看答错的题，可斩题' : '暂无错题，答题后自动更新'}</div>
+          </div>
+        </div>
       </div>
     </div>
   `;
 }
 
-function startTypePractice(id, type) {
+function startTypePracticeWithOptions(id, type, reset) {
   const e = library.find(x => x.id === id); if (!e) return;
   const questions = e.questions.filter(q => q.type === type);
   if (!questions.length) { toast('该题型无题目', 'err'); return; }
+
+  const typeQIds = new Set(questions.map(q => String(q.id)));
+
+  let userAnswers = { ...(e.userAnswers || {}) };
+  let isSubmitted  = { ...(e.isSubmitted || {}) };
+  let isCorrect    = { ...(e.isCorrect || {}) };
+
+  if (reset) {
+    for (const qid of typeQIds) {
+      delete userAnswers[qid];
+      delete isSubmitted[qid];
+      delete isCorrect[qid];
+    }
+    e.userAnswers = userAnswers;
+    e.isSubmitted  = isSubmitted;
+    e.isCorrect    = isCorrect;
+    saveLib();
+  }
+
+  let startIdx = 0;
+  if (!reset) {
+    const idx = questions.findIndex(q => !isSubmitted[q.id]);
+    if (idx >= 0) startIdx = idx;
+    else startIdx = questions.length - 1;
+  }
+
   activeExam = {
     id: e.id, name: e.name, createdAt: e.createdAt, questions,
-    userAnswers: e.userAnswers || {}, isSubmitted: e.isSubmitted || {},
-    isCorrect: e.isCorrect || {}, cutWrong: e.cutWrong || {},
-    currentFilter: type, currentIndex: 0, reviewMode: null
+    userAnswers, isSubmitted, isCorrect,
+    cutWrong: { ...(e.cutWrong || {}) },
+    currentFilter: type, currentIndex: startIdx, reviewMode: null
   };
+
   document.getElementById('detailView').style.display = 'none';
   document.getElementById('quizView').style.display = 'block';
   renderQuizTab();
   applyFilter(type);
-  toast('按题型刷题 · ' + {single:'单选',multiple:'多选',short:'简答',essay:'论述'}[type], 'ok');
+  currentIndex = startIdx;
+  activeExam.currentIndex = startIdx;
+  if (filteredQuestions.length > 0) { renderExam(); updateProgress(); }
+
+  const typeLabels = {single:'单选', multiple:'多选', tf:'判断', short:'简答', essay:'论述'};
+  toast((reset ? '重新开始 · ' : '按题型刷题 · ') + typeLabels[type], 'ok');
 }
 
 function selectMode(id, mode) {
@@ -922,6 +1508,13 @@ function showQuizView() {
 }
 
 function backToLib() {
+  // If in node practice mode (from mind map), return to mind map detail
+  if (activeExam && activeExam._origExamId) {
+    exitNodePractice();
+    switchTab('mindmap');
+    if (currentMindExamId) showMindDetail(currentMindExamId);
+    return;
+  }
   if (activeExam) { activeExam.reviewMode = null; saveExam(activeExam.name); showExamDetail(activeExam.id); }
   else { showLibView(); }
 }
@@ -938,6 +1531,7 @@ document.getElementById('uploadZone').addEventListener('drop', function(e) { e.p
 function handleFile(input) { const f = input.files[0]; if (f) processFile(f); }
 
 let mammothLoaded = false, mammothLoading = false;
+let pdfjsLoaded = false, pdfjsLoading = false;
 async function processFile(file) {
   const ext = file.name.split('.').pop().toLowerCase();
   const ta = document.getElementById('materialInput'), badge = document.getElementById('fileBadge');
@@ -963,6 +1557,40 @@ async function processFile(file) {
       badge.style.display = 'inline-flex'; badge.className = 'file-badge'; badge.textContent = '📄 ' + file.name + ' (已解析)';
       toast('DOCX 解析成功', 'ok');
     } catch (err) { toast('DOCX 解析失败：' + err.message, 'err'); }
+    return;
+  }
+  if (ext === 'pdf') {
+    if (!pdfjsLoaded) {
+      if (pdfjsLoading) { toast('解析器加载中，请稍后', 'info'); return; }
+      pdfjsLoading = true; toast('加载 PDF 解析器……', 'info');
+      let ok = false;
+      for (const url of PDFJS_CDNS) { try { await loadScript(url); ok = true; break; } catch {} }
+      if (!ok) { pdfjsLoading = false; toast('PDF 解析器加载失败，请检查网络', 'err'); return; }
+      // Load worker
+      for (const url of PDFJS_WORKER_CDNS) {
+        try {
+          pdfjsLib.GlobalWorkerOptions.workerSrc = url;
+          break;
+        } catch {}
+      }
+      pdfjsLoading = false;
+      pdfjsLoaded = true;
+    }
+    try {
+      const buf = await file.arrayBuffer();
+      const loadingTask = pdfjsLib.getDocument({ data: buf });
+      const pdf = await loadingTask.promise;
+      let fullText = '';
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        const pageText = content.items.map(item => item.str).join(' ');
+        fullText += pageText + '\n';
+      }
+      ta.value = fullText.trim();
+      badge.style.display = 'inline-flex'; badge.className = 'file-badge'; badge.textContent = '📄 ' + file.name + ' (已解析)';
+      toast('PDF 解析成功（' + pdf.numPages + ' 页）', 'ok');
+    } catch (err) { toast('PDF 解析失败：' + err.message, 'err'); }
     return;
   }
   toast('不支持 .' + ext + ' 格式', 'err');
@@ -1009,12 +1637,18 @@ async function generateExam() {
     }
 
     if (allQuestions.length === 0) throw new Error('未生成有效题目');
+    if (includeOutline) {
+      if (!outline || !outline.length) throw new Error('知识大纲生成失败，请重新生成');
+      const outlineCheck = validateGeneratedOutline(outline, material);
+      if (!outlineCheck.ok) throw new Error(outlineCheck.message);
+    }
 
     // Re-index questions
     const questions = allQuestions.map((q, i) => ({
       id: i, type: q.type || 'single', question: q.question || '', options: q.options || [],
       correctIndex: q.correctIndex, correctIndexes: q.correctIndexes || [],
       referenceAnswer: q.referenceAnswer || '', explanation: q.explanation || '',
+      outlineNodeId: q.outlineNodeId || '',
     }));
 
     const now = new Date();
@@ -1056,7 +1690,7 @@ function splitIntoChunks(text, targetSize) {
 
 // Call DeepSeek API and parse questions (and optionally outline) from response
 async function callAI(materialChunk, userMsg, includeOutline) {
-  const sysPrompt = includeOutline ? SYS_PROMPT_OUTLINE : SYS_PROMPT;
+  const sysPrompt = includeOutline ? SYS_PROMPT_OUTLINE + MINDMAP_QUALITY_PROMPT : SYS_PROMPT;
   const resp = await fetchTimeout('https://api.deepseek.com/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
@@ -1113,10 +1747,121 @@ function parseAIResponse(trimmed) {
     throw new Error('JSON 解析失败，请重试');
   }
 
-  return {
-    questions: parsed.questions.filter(q => q.question && q.question.trim()),
-    outline: parsed.outline || null
-  };
+  const questions = parsed.questions.filter(q => q.question && q.question.trim());
+  let outline = parsed.outline || null;
+
+  // Post-process: enrich outline and auto-link questions
+  if (outline && outline.length) {
+    enrichOutline(outline);
+    autoLinkQuestions(questions, outline);
+  }
+
+  return { questions, outline };
+}
+
+// Enrich outline: auto-assign IDs, ensure description/keyPoints exist
+function enrichOutline(nodes, counter) {
+  if (!counter) counter = { i: 0 };
+  for (const n of nodes) {
+    if (!n.id) n.id = '_auto_' + (counter.i++);
+    if (!n.description) n.description = '';
+    if (!n.keyPoints || !Array.isArray(n.keyPoints)) n.keyPoints = [];
+    if (!n.children || !Array.isArray(n.children)) n.children = [];
+    if (n.children.length) enrichOutline(n.children, counter);
+  }
+}
+
+function getOutlineStats(nodes) {
+  const stats = { total: 0, maxDepth: 0, leafCount: 0, leavesMissingKeyPoints: 0, genericTitleCount: 0 };
+  function walk(list, depth) {
+    if (!Array.isArray(list)) return;
+    for (const n of list) {
+      stats.total++;
+      stats.maxDepth = Math.max(stats.maxDepth, depth);
+      if (isGenericMindTitle(n.title || '')) stats.genericTitleCount++;
+      const children = Array.isArray(n.children) ? n.children : [];
+      if (children.length) {
+        walk(children, depth + 1);
+      } else {
+        stats.leafCount++;
+        if (!Array.isArray(n.keyPoints) || n.keyPoints.filter(Boolean).length < 2) {
+          stats.leavesMissingKeyPoints++;
+        }
+      }
+    }
+  }
+  walk(nodes, 1);
+  return stats;
+}
+
+function isGenericMindTitle(title) {
+  const text = String(title || '').trim().toLowerCase();
+  if (!text) return true;
+  return /^(其他|其它|相关内容|补充内容|知识点|概述|总结|小结|misc|other|summary|overview|related)$/.test(text);
+}
+
+function isSubstantialMaterial(material) {
+  const text = String(material || '').trim();
+  if (!text) return false;
+  const latinWords = (text.match(/[A-Za-z]+/g) || []).length;
+  const cjkChars = (text.match(/[\u4e00-\u9fff]/g) || []).length;
+  return cjkChars >= 1000 || latinWords >= 700 || text.length >= 1600;
+}
+
+function validateGeneratedOutline(outline, material) {
+  const stats = getOutlineStats(outline);
+  const substantial = isSubstantialMaterial(material);
+  const missingLeafRatio = stats.leafCount ? stats.leavesMissingKeyPoints / stats.leafCount : 1;
+  const problems = [];
+
+  if (!stats.total) problems.push('没有生成知识节点');
+  if (substantial && stats.total < 20) problems.push('节点数量不足');
+  if (stats.maxDepth < 3) problems.push('层级深度不足');
+  if (stats.leafCount > 0 && missingLeafRatio > 0.55) problems.push('叶子节点缺少关键要点');
+  if (stats.genericTitleCount > Math.max(2, Math.ceil(stats.total * 0.15))) problems.push('存在过多空泛节点');
+
+  if (problems.length) {
+    return {
+      ok: false,
+      stats,
+      message: '知识大纲过于简略：' + problems.join('、') + '。请重新生成，或减少资料范围后再试。',
+    };
+  }
+  return { ok: true, stats, message: '' };
+}
+
+// Auto-link questions to outline nodes by keyword matching
+function autoLinkQuestions(questions, outline) {
+  const flatNodes = [];
+  function flatten(nodes) {
+    for (const n of nodes) {
+      flatNodes.push(n);
+      if (n.children && n.children.length) flatten(n.children);
+    }
+  }
+  flatten(outline);
+
+  for (const q of questions) {
+    if (q.outlineNodeId) continue;
+    const qText = (q.question || '').toLowerCase();
+    let bestNode = null, bestScore = 0;
+    for (const node of flatNodes) {
+      const title = (node.title || '').toLowerCase();
+      if (!title) continue;
+      let score = 0;
+      if (qText.includes(title)) { score = title.length; }
+      else {
+        const titleWords = title.split(/[\s,，、]+/).filter(Boolean);
+        for (const w of titleWords) {
+          if (w.length >= 2 && qText.includes(w)) score += w.length;
+        }
+      }
+      if (score > bestScore) { bestScore = score; bestNode = node; }
+    }
+    if (bestNode && bestScore >= 2) {
+      q.outlineNodeId = bestNode.id;
+    }
+  }
 }
 
 // Repair truncated JSON: close unclosed strings, brackets, braces
@@ -1171,21 +1916,23 @@ const SYS_PROMPT = `你是专业考试出题系统。根据用户提供的学习
 - 题干、选项、解析中涉及的知识点必须能在资料原文中找到依据
 
 ## 题型分配
-- "single" 单选题（约50%）：概念辨析。4选项，1正确答案。
-- "multiple" 多选题（约25%）：特征列举。4-6选项，2-4正确答案。
+- "single" 单选题（约35%）：概念辨析。4选项，1正确答案。
+- "multiple" 多选题（约20%）：特征列举。4-6选项，2-4正确答案。
+- "tf" 判断题（约15%）：判断陈述正误。2选项（正确/错误），1正确答案。correctIndex=0表示正确，correctIndex=1表示错误。
 - "short" 简答题（约15%）：名词解释。提供参考答案。
-- "essay" 论述题（约10%）：综合分析。提供参考要点。
+- "essay" 论述题（约15%）：综合分析。提供参考要点。
 
 ## 要求
 1. 正确选项准确，错误选项有迷惑性但明确错误
-2. 解析简短（1-2句），引用原文
-3. question不包含选项，选项独立在options数组
-4. 只输出JSON，不要任何解释或前言
+2. 判断题的选项固定为["正确","错误"]，不可更改
+3. 解析简短（1-2句），引用原文
+4. question不包含选项，选项独立在options数组
+5. 只输出JSON，不要任何解释或前言
 
 ## JSON格式（严格）
-{"questions":[{"type":"single","question":"...","options":["A","B","C","D"],"correctIndex":0,"explanation":"简短的解析"},{"type":"multiple","question":"...","options":["A","B","C","D","E"],"correctIndexes":[0,2],"explanation":"简短的解析"},{"type":"short","question":"...","referenceAnswer":"...","explanation":"简短的解析"},{"type":"essay","question":"...","referenceAnswer":"...","explanation":"简短的解析"}]}`;
+{"questions":[{"type":"single","question":"...","options":["A","B","C","D"],"correctIndex":0,"explanation":"简短的解析"},{"type":"multiple","question":"...","options":["A","B","C","D","E"],"correctIndexes":[0,2],"explanation":"简短的解析"},{"type":"tf","question":"...","options":["正确","错误"],"correctIndex":0,"explanation":"简短的解析"},{"type":"short","question":"...","referenceAnswer":"...","explanation":"简短的解析"},{"type":"essay","question":"...","referenceAnswer":"...","explanation":"简短的解析"}]}`;
 
-const SYS_PROMPT_OUTLINE = `你是专业考试出题系统。根据用户提供的学习资料生成高质量题目和知识大纲。
+const SYS_PROMPT_OUTLINE = `你是专业考试出题系统。根据用户提供的学习资料生成高质量题目和详细知识大纲。
 
 ## 铁律（最重要）
 - 题目和知识大纲必须100%基于用户提供的资料，禁止编造任何资料中不存在的内容
@@ -1193,26 +1940,51 @@ const SYS_PROMPT_OUTLINE = `你是专业考试出题系统。根据用户提供�
 - 题干、选项、解析、大纲中涉及的知识点必须能在资料原文中找到依据
 
 ## 题型分配
-- "single" 单选题（约50%）：概念辨析。4选项，1正确答案。
-- "multiple" 多选题（约25%）：特征列举。4-6选项，2-4正确答案。
+- "single" 单选题（约35%）：概念辨析。4选项，1正确答案。
+- "multiple" 多选题（约20%）：特征列举。4-6选项，2-4正确答案。
+- "tf" 判断题（约15%）：判断陈述正误。2选项（正确/错误），1正确答案。correctIndex=0表示正确，correctIndex=1表示错误。
 - "short" 简答题（约15%）：名词解释。提供参考答案。
-- "essay" 论述题（约10%）：综合分析。提供参考要点。
+- "essay" 论述题（约15%）：综合分析。提供参考要点。
 
-## 知识大纲
-根据资料层级结构，生成详细树状知识大纲，深度至少3-4层。要求：
-- 覆盖资料中所有主要知识点，每个知识点尽量展开到基本面
-- 每个节点包含 "title"（标题）和 "children"（子节点数组，可为空）
-- 末级节点可包含具体概念、关键定义、重要公式名称等，标题要简洁（10字以内）
+## 知识大纲（非常重要：务必详细）
+根据资料层级结构，生成详细树状知识大纲，深度至少4-5层。要求：
+- 覆盖资料中所有主要知识点，尽量展开到最基本的概念和定义
+- 大纲节点总数至少25个，越多越好，知识覆盖越完整越好
+- 每个节点必须包含以下字段：
+  - "id"（字符串，从"n0"开始递增编号，如"n0","n1","n2"...）
+  - "title"（标题，12字以内，简洁准确）
+  - "description"（一句话描述核心内容，20字以内，每个节点必须有）
+  - "keyPoints"（关键要点数组，叶子节点至少2-4个要点，非叶子节点可为空数组[]）
+  - "children"（子节点数组，叶子节点为空数组[]）
+- 末级节点（叶子）必须是具体概念、关键定义、重要公式名称等，不可空洞
+- 确保每个知识点展开到最细致的基本概念单元
+
+## 题目关联
+- 每道题必须包含 "outlineNodeId" 字段，值为其所属大纲节点的id
+- 确保每个有题目的节点至少有一道关联题
 
 ## 要求
 1. 正确选项准确，错误选项有迷惑性但明确错误
 2. 解析简短（1-2句），引用原文
 3. question不包含选项，选项独立在options数组
-4. 大纲每个节点含title和children字段，深度充足、不空洞
-5. 只输出JSON，不要任何解释或前言
+4. 判断题的选项固定为["正确","错误"]，不可更改
+5. 大纲深度充足、不空洞，末级节点充实有keyPoints
+6. 只输出JSON，不要任何解释或前言
 
 ## JSON格式（严格）
-{"questions":[...],"outline":[{"title":"第一章 XX概述","children":[{"title":"1.1 基本概念","children":[{"title":"定义与特征","children":[{"title":"核心定义","children":[]},{"title":"关键特征","children":[]}]},{"title":"分类","children":[{"title":"类型A","children":[]}]}]},{"title":"1.2 重要原理","children":[]}]}]}`;
+{"questions":[{"type":"single","question":"题干","options":["A","B","C","D"],"correctIndex":0,"outlineNodeId":"n3","explanation":"解析"},{"type":"tf","question":"题干","options":["正确","错误"],"correctIndex":0,"outlineNodeId":"n5","explanation":"解析"}],"outline":[{"id":"n0","title":"第一章概述","description":"介绍基本概念和整体框架","keyPoints":[],"children":[{"id":"n1","title":"核心定义","description":"XX的定义及其本质特征","keyPoints":["要点1：XX是...","要点2：XX包含...","要点3：XX的关键在于..."],"children":[]}]}]}`;
+
+const MINDMAP_QUALITY_PROMPT = `
+
+## Mind map quality upgrade
+- Build a dense traditional horizontal mind map, not a brief outline.
+- For substantial material, target at least 40 outline nodes and at least 4 levels of depth.
+- Use this hierarchy when the source allows it: chapter/topic -> knowledge module -> concrete concept/mechanism/rule/procedure/comparison -> definition/condition/step/exception/common mistake/exam angle.
+- Every leaf node must be a concrete learnable point and should include 2-4 keyPoints.
+- Avoid vague node titles such as "other", "related content", "summary", "overview", "misc", "知识点", "相关内容", "总结".
+- Keep all content grounded in the provided material. Do not invent knowledge not present in the source.
+- Link each question to the most specific outline node with outlineNodeId.
+`;
 
 // ==================== QUIZ RENDER ====================
 function renderQuizTab() {
@@ -1266,8 +2038,8 @@ function applyFilter(type) {
 
 function renderTypeTabs() {
   if (!activeExam) return;
-  const types = ['all','single','multiple','short','essay'];
-  const labels = {all:'全部',single:'单选',multiple:'多选',short:'简答',essay:'论述'};
+  const types = ['all','single','multiple','tf','short','essay'];
+  const labels = {all:'全部',single:'单选',multiple:'多选',tf:'判断',short:'简答',essay:'论述'};
   const counts = {};
   types.forEach(t => { counts[t] = t === 'all' ? activeExam.questions.length : activeExam.questions.filter(q => q.type === t).length; });
   const tabsEl = document.getElementById('typeTabs');
@@ -1280,8 +2052,8 @@ function renderExam() {
   if (!activeExam || filteredQuestions.length === 0) return;
   const q = filteredQuestions[currentIndex], oi = origIdx();
   document.getElementById('qIdx').textContent = '第 ' + (currentIndex+1) + '/' + filteredQuestions.length + ' 题';
-  const tl = {single:'单选题',multiple:'多选题',short:'简答题',essay:'论述题'};
-  const tc = {single:'tag-s',multiple:'tag-m',short:'tag-h',essay:'tag-e'};
+  const tl = {single:'单选题',multiple:'多选题',tf:'判断题',short:'简答题',essay:'论述题'};
+  const tc = {single:'tag-s',multiple:'tag-m',tf:'tag-t',short:'tag-h',essay:'tag-e'};
   const tag = document.getElementById('qTag'); tag.textContent = tl[q.type] || q.type; tag.className = 'type-tag ' + (tc[q.type] || '');
   const hd = document.querySelector('#examCard .exam-hd');
   if (hd.querySelector('.edit-btn')) hd.querySelector('.edit-btn').remove();
@@ -1296,6 +2068,7 @@ function renderExam() {
     case 'multiple': renderMulti(area, q, oi, sub); break;
     case 'short': renderShort(area, q, oi, sub); break;
     case 'essay': renderEssay(area, q, oi, sub); break;
+    case 'tf': renderTf(area, q, oi, sub); break;
     default: renderSingle(area, q, oi, sub);
   }
   document.getElementById('prevBtn').disabled = currentIndex === 0;
@@ -1402,6 +2175,29 @@ function renderEssay(area, q, oi, sub) {
   if (!sub) { const t = document.getElementById('essayTA'); if (t) t.addEventListener('input', function() { activeExam.userAnswers[oi] = this.value; const b = document.getElementById('essaySub'); if (b) b.disabled = this.value.trim().length === 0; }); }
 }
 function subEssay(oi) { activeExam.isSubmitted[oi] = true; renderExam(); updateProgress(); checkFinish(); }
+
+// -- True/False --
+function renderTf(area, q, oi, sub) {
+  const labels = ['正确', '错误'];
+  area.innerHTML = `<div class="options">${labels.map((lbl, i) => {
+    let c = 'opt';
+    if (sub) { c += ' disabled'; if (i === q.correctIndex) c += ' correct'; if (activeExam.userAnswers[oi] === i && i !== q.correctIndex) c += ' wrong'; }
+    return `<div class="${c}" onclick="clickTf(${i})"><div class="ic-radio"></div><span>${lbl}</span></div>`;
+  }).join('')}</div>${sub ? expBox(q) : ''}`;
+}
+
+function clickTf(i) {
+  const oi = origIdx();
+  if (activeExam.isSubmitted[oi]) return;
+  activeExam.userAnswers[oi] = i;
+  activeExam.isSubmitted[oi] = true;
+  activeExam.isCorrect[oi] = i === activeExam.questions[oi].correctIndex;
+  recordAnswer(activeExam.isCorrect[oi]);
+  renderExam(); updateProgress(); checkFinish();
+  if (autoAdvance && activeExam.isCorrect[oi] && currentIndex < filteredQuestions.length - 1) {
+    setTimeout(() => { currentIndex++; activeExam.currentIndex = currentIndex; renderExam(); updateProgress(); }, 600);
+  }
+}
 
 // ==================== HELPERS ====================
 function expBox(q) { return q.explanation ? `<div class="exp-box show"><div class="exp-label">解析</div>${escH(q.explanation).replace(/\n/g,'<br>')}</div>` : ''; }
@@ -1532,7 +2328,7 @@ function openEditModal(qid) {
   editTargetId = qid;
 
   const totalQuestions = exam.questions.length;
-  const typeLabels = {single:'单选题',multiple:'多选题',short:'简答题',essay:'论述题'};
+  const typeLabels = {single:'单选题',multiple:'多选题',tf:'判断题',short:'简答题',essay:'论述题'};
 
   let html = `
     <div class="form-group">
@@ -1593,6 +2389,18 @@ function renderEditTypeArea(q) {
           </div>`).join('')}
         <div style="font-size:10px;color:var(--t3);margin-top:4px;">☑ 勾选所有正确答案（1-4个）</div>`;
       break;
+    case 'tf':
+      area.innerHTML = `
+        <div class="form-group"><label class="form-label">正确答案</label></div>
+        <div class="opt-row" style="gap:16px;">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px;">
+            <input type="radio" name="editTfCorrect" value="0" class="opt-check" ${q.correctIndex===0?'checked':''}> ✅ 正确
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px;">
+            <input type="radio" name="editTfCorrect" value="1" class="opt-check" ${q.correctIndex===1?'checked':''}> ❌ 错误
+          </label>
+        </div>`;
+      break;
     case 'short':
     case 'essay':
       area.innerHTML = `
@@ -1616,6 +2424,74 @@ function onEditTypeChange() {
 function closeEditModal() {
   document.getElementById('editModal').classList.add('hidden');
   editTargetId = null;
+}
+
+function deleteQuestion() {
+  if (editTargetId === null) return;
+  const exam = library.find(e => e.id === activeExam.id);
+  if (!exam) return;
+  if (exam.questions.length <= 1) {
+    toast('这是最后一道题，不能删除。可以直接删除整份试卷。', 'err');
+    return;
+  }
+  if (!confirm('确定要删除此题吗？此操作不可恢复。')) return;
+
+  const qid = editTargetId;
+
+  // Remove the question
+  exam.questions.splice(qid, 1);
+
+  // Re-index all questions and build id map
+  const idMap = {};
+  exam.questions.forEach((q, i) => {
+    idMap[q.id] = i;
+    q.id = i;
+  });
+
+  // Remap exam data keyed by old question id
+  ['userAnswers', 'isSubmitted', 'isCorrect', 'cutWrong'].forEach(field => {
+    const old = exam[field] || {};
+    const updated = {};
+    for (const [k, v] of Object.entries(old)) {
+      const newK = idMap[parseInt(k)];
+      if (newK !== undefined) updated[newK] = v;
+    }
+    exam[field] = updated;
+  });
+
+  // Sync to activeExam
+  if (activeExam && activeExam.id === exam.id) {
+    activeExam.questions = [...exam.questions];
+    ['userAnswers', 'isSubmitted', 'isCorrect', 'cutWrong'].forEach(field => {
+      const old = activeExam[field] || {};
+      const updated = {};
+      for (const [k, v] of Object.entries(old)) {
+        const newK = idMap[parseInt(k)];
+        if (newK !== undefined) updated[newK] = v;
+      }
+      activeExam[field] = updated;
+    });
+    // Rebuild filtered questions
+    const type = activeExam.currentFilter;
+    filteredQuestions = type === 'all' ? [...activeExam.questions] : activeExam.questions.filter(q => q.type === type);
+    if (currentIndex >= filteredQuestions.length) currentIndex = filteredQuestions.length - 1;
+    if (currentIndex < 0) currentIndex = 0;
+    activeExam.currentIndex = currentIndex;
+  }
+
+  saveLib();
+  closeEditModal();
+
+  // Refresh UI
+  if (activeExam && activeExam.id === exam.id) {
+    renderTypeTabs();
+    if (filteredQuestions.length > 0) {
+      renderExam();
+      updateProgress();
+    }
+    renderAnswerSheet();
+  }
+  toast('题目已删除', 'ok');
 }
 
 function saveQuestionEdit() {
@@ -1647,6 +2523,11 @@ function saveQuestionEdit() {
   const L = ['A','B','C','D','E','F','G'];
 
   switch (newType) {
+    case 'tf':
+      newQ.options = ['正确', '错误'];
+      const tfEl = document.querySelector('input[name="editTfCorrect"]:checked');
+      newQ.correctIndex = tfEl ? parseInt(tfEl.value) : 0;
+      break;
     case 'single':
       const optCount = 4;
       for (let i = 0; i < optCount; i++) {
@@ -1821,10 +2702,11 @@ function showProgressDetail() {
   const types = [
     { key: 'single', label: '单选', cls: 'ta-tag' },
     { key: 'multiple', label: '多选', cls: 'ta-tag' },
+    { key: 'tf', label: '判断', cls: 'ta-tag' },
     { key: 'short', label: '简答', cls: 'ta-tag' },
     { key: 'essay', label: '论述', cls: 'ta-tag' }
   ];
-  const typeColors = { single: 'var(--accent)', multiple: 'var(--purple)', short: 'var(--amber)', essay: 'var(--green)' };
+  const typeColors = { single: 'var(--accent)', multiple: 'var(--purple)', tf: 'var(--teal)', short: 'var(--amber)', essay: 'var(--green)' };
   document.getElementById('typeAccRow').innerHTML = types.map(t => {
     const d = progress.byType[t.key];
     const pct = d && d.total > 0 ? Math.round(d.correct / d.total * 100) : 0;
@@ -1940,6 +2822,10 @@ document.getElementById('chatInput').addEventListener('input', function() {
 });
 
 // ==================== MIND MAP TAB ====================
+let currentMindExamId = null;
+let currentMarkmap = null;
+let mindSearchTerm = '';
+
 function renderMindList() {
   const examsWithOutline = library.filter(e => e.outline && e.outline.length);
   const grid = document.getElementById('mindGrid'), empty = document.getElementById('mindEmpty');
@@ -1979,8 +2865,18 @@ function countOutlineNodes(nodes) {
 function showMindDetail(id) {
   const e = library.find(x => x.id === id);
   if (!e || !e.outline) { toast('该试卷没有知识大纲', 'err'); return; }
+  currentMindExamId = id;
+
+  // Ensure outline has IDs (for old data)
+  enrichOutline(e.outline);
+  // Ensure questions have outlineNodeId (for old data)
+  autoLinkQuestions(e.questions, e.outline);
+
   const d = new Date(e.createdAt);
   const ds = d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate();
+
+  // Compute node mastery
+  const mastery = calcNodeMastery(e.outline, e.questions, e.isSubmitted || {}, e.isCorrect || {});
 
   document.getElementById('mindListView').style.display = 'none';
   document.getElementById('mindDetailView').style.display = 'block';
@@ -1989,58 +2885,450 @@ function showMindDetail(id) {
       <button class="btn btn-s btn-sm btn-back" onclick="backToMindList()">← 返回</button>
       <div style="flex:1;">
         <h2 class="detail-name-display">${escH(e.name)}</h2>
-        <div style="font-size:11px;color:var(--t3);">${ds} · ${countOutlineNodes(e.outline)}个知识点</div>
+        <div style="font-size:11px;color:var(--t3);">${ds} · ${countOutlineNodes(e.outline)}个知识点 · ${e.questions.length}题</div>
       </div>
       <button class="btn btn-s btn-sm" onclick="toggleMindFullscreen()" title="全屏">⛶</button>
     </div>
     <div class="mm-outer" id="mindmapContainer">
-      <div class="mm-canvas" id="mmCanvas"></div>
+      <div class="mm-toolbar">
+        <button class="btn btn-s" onclick="mindExpandAll()" title="展开全部">⊞ 展开</button>
+        <button class="btn btn-s" onclick="mindCollapseAll()" title="折叠全部">⊟ 折叠</button>
+        <button class="btn btn-s" onclick="mindZoomIn()" title="放大">+</button>
+        <button class="btn btn-s" onclick="mindZoomOut()" title="缩小">−</button>
+        <button class="btn btn-s" onclick="mindZoomReset()" title="重置">⟲</button>
+        <button class="btn btn-s" onclick="exportMindPNG()" title="导出图片">📷 导出</button>
+        <button class="btn btn-s" onclick="exportMindMD()" title="导出文本">📝 MD</button>
+      </div>
+      <div class="mm-search">
+        <input type="text" id="mindSearchInput" placeholder="搜索知识点..." oninput="mindSearch(this.value)">
+      </div>
+      <div class="mm-legend">
+        <span><span class="dot" style="background:var(--green)"></span>已掌握 ≥80%</span>
+        <span><span class="dot" style="background:var(--amber)"></span>薄弱 40-80%</span>
+        <span><span class="dot" style="background:var(--red)"></span>需加强 &lt;40%</span>
+        <span><span class="dot" style="background:var(--border)"></span>无题目</span>
+      </div>
+      <div class="node-detail-panel" id="nodeDetailPanel">
+        <button class="nd-close" onclick="closeNodeDetail()">✕</button>
+        <div class="nd-title" id="ndTitle"></div>
+        <div class="nd-desc" id="ndDesc"></div>
+        <div class="nd-kps" id="ndKps"></div>
+        <div class="nd-stats" id="ndStats"></div>
+        <button class="btn btn-p btn-sm nd-btn" id="ndBtn" onclick="practiceNode()">练习此知识点</button>
+      </div>
+      <svg id="mmSvg"></svg>
     </div>`;
 
-  buildMindMap(e.outline);
+  buildMindMap(e.outline, mastery);
 }
 
-function buildMindMap(nodes) {
-  const canvas = document.getElementById('mmCanvas');
-  if (!canvas) return;
-  canvas.innerHTML = '';
-  // Virtual root wrapping all top-level nodes
-  const root = document.createElement('div');
-  root.className = 'mm-root';
-  nodes.forEach(n => root.appendChild(buildMindNode(n, 0)));
-  canvas.appendChild(root);
-  // Expand first level
-  root.querySelectorAll('.mm-node').forEach(n => n.classList.add('expanded'));
-}
-
-function buildMindNode(n, depth) {
-  const hasKids = n.children && n.children.length;
-  const div = document.createElement('div');
-  div.className = 'mm-node' + (hasKids ? ' mm-has-kids' : ' mm-leaf');
-  if (depth < 2) div.classList.add('expanded');
-
-  const card = document.createElement('div');
-  card.className = 'mm-card mm-depth-' + Math.min(depth, 4);
-  card.textContent = n.title;
-  card.onclick = function(e) {
-    e.stopPropagation();
-    if (hasKids) {
-      div.classList.toggle('expanded');
-      div.classList.toggle('collapsed');
+function calcNodeMastery(outline, questions, isSubmitted, isCorrect) {
+  // Build map: nodeId -> {total, correct, submitted}
+  const nodeMap = {};
+  function initMap(nodes) {
+    for (const n of nodes) {
+      nodeMap[n.id] = { total: 0, correct: 0, submitted: 0 };
+      if (n.children && n.children.length) initMap(n.children);
     }
-  };
-  div.appendChild(card);
-
-  if (hasKids) {
-    const kids = document.createElement('div');
-    kids.className = 'mm-kids';
-    n.children.forEach(c => kids.appendChild(buildMindNode(c, depth + 1)));
-    div.appendChild(kids);
   }
-  return div;
+  initMap(outline);
+
+  // Count questions per node
+  for (const q of questions) {
+    const nid = q.outlineNodeId;
+    if (nid && nodeMap[nid] !== undefined) {
+      nodeMap[nid].total++;
+      const oi = q.id;
+      if (isSubmitted[oi]) {
+        nodeMap[nid].submitted++;
+        if (isCorrect[oi]) nodeMap[nid].correct++;
+      }
+    }
+  }
+
+  // Propagate stats up: parent = sum of children + own
+  function propagate(nodes) {
+    for (const n of nodes) {
+      if (n.children && n.children.length) {
+        propagate(n.children);
+        for (const c of n.children) {
+          if (nodeMap[c.id]) {
+            nodeMap[n.id].total += nodeMap[c.id].total;
+            nodeMap[n.id].correct += nodeMap[c.id].correct;
+            nodeMap[n.id].submitted += nodeMap[c.id].submitted;
+          }
+        }
+      }
+    }
+  }
+  propagate(outline);
+
+  // Compute rate per node
+  const mastery = {};
+  for (const [nid, stats] of Object.entries(nodeMap)) {
+    if (stats.submitted === 0) {
+      mastery[nid] = stats.total === 0 ? 'none' : 'untested';
+    } else {
+      const rate = stats.correct / stats.submitted;
+      if (rate >= 0.8) mastery[nid] = 'mastered';
+      else if (rate >= 0.4) mastery[nid] = 'weak';
+      else mastery[nid] = 'poor';
+    }
+  }
+  return { mastery, nodeMap };
+}
+
+const MIND_BRANCH_COLORS = ['#2563eb', '#0f766e', '#c2410c', '#7c3aed', '#be123c', '#4d7c0f', '#0369a1', '#a16207'];
+
+function getMindBranchColor(branchIndex) {
+  return MIND_BRANCH_COLORS[Math.abs(branchIndex || 0) % MIND_BRANCH_COLORS.length];
+}
+
+function getMindQuestionCount(nodeId, masteryData) {
+  return masteryData && masteryData.nodeMap && masteryData.nodeMap[nodeId] ? masteryData.nodeMap[nodeId].total : 0;
+}
+
+function getMindNodeLabel(n, masteryData) {
+  const count = getMindQuestionCount(n.id, masteryData);
+  const desc = (n.description || '').trim();
+  let label = n.title || '';
+  if (count > 0) label += ' · ' + count + '题';
+  else if (desc && desc.length <= 14) label += ' · ' + desc;
+  return label;
+}
+
+// Convert JSON outline to markmap INode format (v=value, c=children, p=payload)
+function outlineToMarkmap(nodes, depth, branchIndex, masteryData) {
+  if (!depth) depth = 0;
+  if (branchIndex === undefined) branchIndex = 0;
+  return nodes.map((n, idx) => {
+    const nextBranch = depth === 0 ? idx : branchIndex;
+    return {
+    t: 'heading',
+    d: depth + 1,
+    v: getMindNodeLabel(n, masteryData),
+    c: (n.children && n.children.length) ? outlineToMarkmap(n.children, depth + 1, nextBranch, masteryData) : [],
+    p: {
+      id: n.id,
+      title: n.title || '',
+      description: n.description || '',
+      keyPoints: n.keyPoints || [],
+      branchIndex: nextBranch,
+      depth: depth,
+      questionCount: getMindQuestionCount(n.id, masteryData)
+    }
+    };
+  });
+}
+
+function buildMindMap(outline, masteryData) {
+  const svg = document.getElementById('mmSvg');
+  if (!svg) return;
+
+  // Check if markmap is available
+  if (window.markmap && window._markmapLoaded !== false) {
+    buildMarkmapMindMap(svg, outline, masteryData);
+  } else {
+    buildFallbackTree(outline, masteryData);
+  }
+}
+
+function buildMarkmapMindMap(svg, outline, masteryData) {
+  svg.innerHTML = '';
+  svg.setAttribute('width', '100%');
+  svg.setAttribute('height', '100%');
+  svg.style.display = 'block';
+
+  // Hide fallback tree if visible
+  var fb = document.getElementById('mmTreeFallback');
+  if (fb) fb.style.display = 'none';
+
+  if (currentMarkmap) {
+    try { currentMarkmap.destroy(); } catch(e) {}
+    currentMarkmap = null;
+  }
+
+  const data = {
+    t: 'root', d: 0, v: '知识大纲',
+    c: outlineToMarkmap(outline, 0, 0, masteryData),
+    p: { id: '_root' }
+  };
+
+  try {
+    currentMarkmap = window.markmap.Markmap.create(svg, {
+      autoFit: true, duration: 400, maxInitialScale: 1.2,
+      initialExpandLevel: 3, paddingX: 18,
+      spacingHorizontal: 96, spacingVertical: 14, fitRatio: 0.95
+    }, data);
+
+    // Apply mastery colors after render
+    setTimeout(() => applyMindMapVisuals(masteryData), 600);
+
+    // Click handler for node details
+    svg.addEventListener('click', function(e) {
+      const target = e.target.closest('.markmap-node');
+      if (!target) { closeNodeDetail(); return; }
+      const nodeData = target.__data__;
+      if (!nodeData || !nodeData.data || !nodeData.data.p) { closeNodeDetail(); return; }
+      const payload = nodeData.data.p;
+      if (!payload || payload.id === '_root') { closeNodeDetail(); return; }
+      showNodeDetail(payload, masteryData);
+    });
+
+  } catch(err) {
+    console.error('Markmap error:', err);
+    svg.style.display = 'none';
+    buildFallbackTree(outline, masteryData);
+  }
+}
+
+// Fallback: simple HTML expandable tree (always works, no CDN needed)
+function buildFallbackTree(outline, masteryData) {
+  var container = document.getElementById('mindmapContainer');
+  if (!container) return;
+
+  // Remove old fallback if exists
+  var oldFb = document.getElementById('mmTreeFallback');
+  if (oldFb) oldFb.remove();
+
+  // Hide SVG
+  var svg = document.getElementById('mmSvg');
+  if (svg) svg.style.display = 'none';
+
+  var wrap = document.createElement('div');
+  wrap.className = 'mm-tree-wrap';
+  wrap.id = 'mmTreeFallback';
+
+  function renderNodes(nodes, depth, branchIndex) {
+    var ul = document.createElement('ul');
+    nodes.forEach(function(n, idx) {
+      var nextBranch = depth === 0 ? idx : (branchIndex || 0);
+      var li = document.createElement('li');
+      var hasKids = n.children && n.children.length;
+
+      var nodeDiv = document.createElement('div');
+      nodeDiv.style.display = 'inline-flex';
+      nodeDiv.style.alignItems = 'center';
+      nodeDiv.style.gap = '4px';
+
+      var toggle = document.createElement('span');
+      toggle.className = 'mt-toggle';
+      if (hasKids) {
+        toggle.textContent = '▼';
+        toggle.style.cursor = 'pointer';
+        toggle.onclick = function(e) {
+          e.stopPropagation();
+          var kidsUl = li.querySelector(':scope > ul');
+          if (kidsUl) {
+            var hidden = kidsUl.style.display === 'none';
+            kidsUl.style.display = hidden ? '' : 'none';
+            toggle.textContent = hidden ? '▼' : '▶';
+          }
+        };
+      }
+      nodeDiv.appendChild(toggle);
+
+      var card = document.createElement('span');
+      card.className = 'mt-node mt-l' + Math.min(depth, 4);
+      card.textContent = n.title;
+      var qCount = getMindQuestionCount(n.id, masteryData);
+      if (qCount > 0) {
+        var count = document.createElement('span');
+        count.className = 'mt-count';
+        count.textContent = qCount + '题';
+        card.appendChild(count);
+      }
+      if (depth === 1) {
+        var branchColor = getMindBranchColor(nextBranch);
+        card.style.borderColor = branchColor;
+        card.style.color = branchColor;
+        card.style.background = branchColor + '12';
+      }
+      card.onclick = function(e) {
+        e.stopPropagation();
+        if (masteryData) {
+          showNodeDetail({ id: n.id, title: n.title, description: n.description || '', keyPoints: n.keyPoints || [], questionCount: qCount }, masteryData);
+        }
+      };
+      nodeDiv.appendChild(card);
+
+      // Description tooltip-style
+      if (n.description) {
+        var desc = document.createElement('span');
+        desc.className = 'mt-desc';
+        desc.textContent = n.description;
+        nodeDiv.appendChild(desc);
+      }
+
+      li.appendChild(nodeDiv);
+
+      if (hasKids) {
+        var kidsUl = renderNodes(n.children, depth + 1, nextBranch);
+        // Collapse deep nodes by default
+        if (depth >= 2) kidsUl.style.display = 'none';
+        li.appendChild(kidsUl);
+      }
+      ul.appendChild(li);
+    });
+    return ul;
+  }
+
+  wrap.appendChild(renderNodes(outline, 0, 0));
+  container.appendChild(wrap);
+}
+
+// Apply branch hierarchy and mastery-based colors to markmap nodes
+function applyMindMapVisuals(masteryData) {
+  const svg = document.getElementById('mmSvg');
+  if (!svg) return;
+
+  svg.querySelectorAll('.markmap-node').forEach(nodeGroup => {
+    const circle = nodeGroup.querySelector('circle');
+    const text = nodeGroup.querySelector('text');
+    if (!circle) return;
+    if (!nodeGroup) return;
+    const nodeData = nodeGroup.__data__;
+    if (!nodeData || !nodeData.data || !nodeData.data.p) return;
+    const payload = nodeData.data.p;
+    const nid = payload.id;
+    if (!nid || nid === '_root') {
+      if (text) {
+        text.setAttribute('font-weight', '800');
+        text.setAttribute('fill', '#111827');
+      }
+      return;
+    }
+
+    const branchColor = getMindBranchColor(payload.branchIndex || 0);
+    let color = branchColor;
+    let fill = '#ffffff';
+
+    if (payload.depth === 0) fill = branchColor + '18';
+    else if (payload.depth === 1) fill = branchColor + '12';
+
+    const m = masteryData && masteryData.mastery ? masteryData.mastery[nid] : null;
+    if (m === 'mastered') { color = '#137333'; fill = '#e6f4ea'; }
+    else if (m === 'weak') { color = '#e37400'; fill = '#fef7e0'; }
+    else if (m === 'poor') { color = '#c5221f'; fill = '#fce8e6'; }
+
+    const strokeWidth = payload.depth <= 1 ? '3' : '2';
+    circle.dataset.baseStroke = color;
+    circle.dataset.baseFill = fill;
+    circle.dataset.baseStrokeWidth = strokeWidth;
+    circle.setAttribute('stroke', color);
+    circle.setAttribute('stroke-width', strokeWidth);
+    circle.setAttribute('fill', fill);
+    circle.setAttribute('r', payload.depth === 0 ? '6' : '4.5');
+
+    if (text) {
+      text.setAttribute('fill', payload.depth <= 1 ? '#111827' : '#334155');
+      text.setAttribute('font-weight', payload.depth <= 1 ? '800' : '650');
+      text.setAttribute('font-size', payload.depth === 0 ? '17px' : payload.depth === 1 ? '15px' : '13px');
+    }
+  });
+}
+
+function applyMasteryColors(masteryData) {
+  applyMindMapVisuals(masteryData);
+}
+
+let currentNodePayload = null;
+
+function showNodeDetail(payload, masteryData) {
+  currentNodePayload = payload;
+  const panel = document.getElementById('nodeDetailPanel');
+  if (!panel) return;
+
+  document.getElementById('ndTitle').textContent = payload.title || payload.content || '';
+  document.getElementById('ndDesc').textContent = payload.description || '';
+
+  const kpsDiv = document.getElementById('ndKps');
+  if (payload.keyPoints && payload.keyPoints.length) {
+    kpsDiv.innerHTML = '<strong>关键要点：</strong><ul>' + payload.keyPoints.map(k => '<li>' + escH(k) + '</li>').join('') + '</ul>';
+    kpsDiv.style.display = 'block';
+  } else {
+    kpsDiv.style.display = 'none';
+  }
+
+  const statsDiv = document.getElementById('ndStats');
+  if (masteryData && masteryData.nodeMap && masteryData.nodeMap[payload.id]) {
+    const s = masteryData.nodeMap[payload.id];
+    const rate = s.submitted > 0 ? Math.round(s.correct / s.submitted * 100) : '--';
+    statsDiv.innerHTML = `
+      <div class="nd-stat"><div class="nds-val">${s.total}</div><div class="nds-lbl">关联题目</div></div>
+      <div class="nd-stat"><div class="nds-val">${s.submitted}</div><div class="nds-lbl">已作答</div></div>
+      <div class="nd-stat"><div class="nds-val">${rate}%</div><div class="nds-lbl">正确率</div></div>`;
+    statsDiv.style.display = 'flex';
+
+    const btn = document.getElementById('ndBtn');
+    if (s.total > 0) {
+      btn.style.display = 'block';
+      btn.textContent = '练习此知识点 (' + s.total + '题)';
+    } else {
+      btn.style.display = 'none';
+    }
+  } else {
+    statsDiv.innerHTML = '<span style="color:var(--t3);">暂无题目关联</span>';
+    statsDiv.style.display = 'flex';
+    document.getElementById('ndBtn').style.display = 'none';
+  }
+
+  panel.classList.add('show');
+}
+
+function closeNodeDetail() {
+  const panel = document.getElementById('nodeDetailPanel');
+  if (panel) panel.classList.remove('show');
+  currentNodePayload = null;
+}
+
+function practiceNode() {
+  if (!currentMindExamId || !currentNodePayload) return;
+  const e = library.find(x => x.id === currentMindExamId);
+  if (!e) return;
+  // Filter questions linked to this node
+  const nodeId = currentNodePayload.id;
+  const linkedQuestions = e.questions.filter(q => q.outlineNodeId === nodeId);
+  if (linkedQuestions.length === 0) {
+    toast('该知识点暂无关联题目', 'warn');
+    return;
+  }
+  // Create a filtered exam session
+  const origQuestions = e.questions;
+  const origId = e.id;
+  activeExam = { ...e, questions: linkedQuestions, currentFilter: 'all', currentIndex: 0, reviewMode: null, _origExamId: origId, _origQuestions: origQuestions };
+  filteredQuestions = [...linkedQuestions];
+  // Show quiz view
+  document.getElementById('tabLibrary').classList.add('active');
+  document.getElementById('tabImport').classList.remove('active');
+  document.getElementById('tabMindmap').classList.remove('active');
+  document.getElementById('libView').style.display = 'none';
+  document.getElementById('detailView').style.display = 'none';
+  document.getElementById('quizView').style.display = 'block';
+  document.getElementById('navLib').classList.add('active');
+  document.getElementById('navImport').classList.remove('active');
+  document.getElementById('navMind').classList.remove('active');
+  renderQuizTab();
+}
+
+// Call this to exit node practice and restore original exam
+function exitNodePractice() {
+  if (activeExam && activeExam._origExamId) {
+    const orig = library.find(x => x.id === activeExam._origExamId);
+    if (orig) {
+      activeExam = orig;
+      filteredQuestions = [...orig.questions];
+    }
+  }
 }
 
 function backToMindList() {
+  currentMindExamId = null;
+  if (currentMarkmap) { try { currentMarkmap.destroy(); } catch(e) {} currentMarkmap = null; }
+  var fb = document.getElementById('mmTreeFallback');
+  if (fb) fb.remove();
+  var svg = document.getElementById('mmSvg');
+  if (svg) svg.style.display = 'block';
   document.getElementById('mindListView').style.display = 'block';
   document.getElementById('mindDetailView').style.display = 'none';
 }
@@ -2050,9 +3338,180 @@ function toggleMindFullscreen() {
   if (!container) return;
   if (document.fullscreenElement) {
     document.exitFullscreen();
+    container.classList.remove('fullscreen');
   } else {
-    container.requestFullscreen();
+    container.classList.add('fullscreen');
+    container.requestFullscreen().catch(() => container.classList.remove('fullscreen'));
   }
+}
+
+function mindExpandAll() {
+  if (currentMarkmap) {
+    currentMarkmap.setData(currentMarkmap.state.data, { initialExpandLevel: 99 });
+    setTimeout(() => refreshMindMapStyles(), 300);
+  }
+  // Fallback tree: expand all
+  var tree = document.getElementById('mmTreeFallback');
+  if (tree) tree.querySelectorAll('ul').forEach(function(u) { u.style.display = ''; });
+}
+
+function mindCollapseAll() {
+  if (currentMarkmap) {
+    currentMarkmap.setData(currentMarkmap.state.data, { initialExpandLevel: 1 });
+    setTimeout(() => refreshMindMapStyles(), 300);
+  }
+  // Fallback tree: collapse all except root
+  var tree = document.getElementById('mmTreeFallback');
+  if (tree) {
+    tree.querySelectorAll('ul ul').forEach(function(u) { u.style.display = 'none'; });
+  }
+}
+
+function mindZoomIn() {
+  if (currentMarkmap) {
+    const s = (currentMarkmap.state.scale || 1) * 1.3;
+    currentMarkmap.rescale(s);
+  }
+}
+
+function mindZoomOut() {
+  if (currentMarkmap) {
+    const s = (currentMarkmap.state.scale || 1) / 1.3;
+    currentMarkmap.rescale(s);
+  }
+}
+
+function mindZoomReset() {
+  if (currentMarkmap) {
+    currentMarkmap.fit();
+  }
+}
+
+function refreshMindMapStyles() {
+  if (!currentMindExamId) return;
+  const e = library.find(x => x.id === currentMindExamId);
+  if (!e || !e.outline) return;
+  const mastery = calcNodeMastery(e.outline, e.questions, e.isSubmitted || {}, e.isCorrect || {});
+  applyMindMapVisuals(mastery);
+}
+
+function mindSearch(term) {
+  mindSearchTerm = term.trim().toLowerCase();
+  if (currentMarkmap) {
+    const svg = document.getElementById('mmSvg');
+    if (!svg) return;
+    const nodes = svg.querySelectorAll('.markmap-node');
+    nodes.forEach(n => {
+      const data = n.__data__;
+      const text = data?.data?.v || '';
+      const circle = n.querySelector('circle');
+      if (!circle) return;
+      if (mindSearchTerm && mindSearchTerm.length >= 1 && text.toLowerCase().includes(mindSearchTerm)) {
+        circle.setAttribute('stroke', '#2563eb');
+        circle.setAttribute('stroke-width', '3');
+        circle.setAttribute('fill', '#e8f0fe');
+      } else {
+        if (circle.dataset.baseStroke) circle.setAttribute('stroke', circle.dataset.baseStroke);
+        else circle.removeAttribute('stroke');
+        if (circle.dataset.baseFill) circle.setAttribute('fill', circle.dataset.baseFill);
+        else circle.removeAttribute('fill');
+        if (circle.dataset.baseStrokeWidth) circle.setAttribute('stroke-width', circle.dataset.baseStrokeWidth);
+        else circle.removeAttribute('stroke-width');
+      }
+    });
+  }
+  // Fallback tree search
+  var tree = document.getElementById('mmTreeFallback');
+  if (tree) {
+    tree.querySelectorAll('.mt-node').forEach(function(card) {
+      var text = (card.textContent || '').toLowerCase();
+      if (mindSearchTerm && mindSearchTerm.length >= 1 && text.includes(mindSearchTerm)) {
+        card.style.background = '#e8f0fe';
+        card.style.outline = '2px solid #2563eb';
+      } else {
+        card.style.background = '';
+        card.style.outline = '';
+      }
+    });
+  }
+}
+
+function exportMindPNG() {
+  if (currentMarkmap) {
+    exportMarkmapPNG();
+  } else {
+    toast('当前为文字树模式，请使用「导出MD」获取大纲文本', 'warn');
+  }
+}
+function exportMarkmapPNG() {
+  const svg = document.getElementById('mmSvg');
+  if (!svg) { toast('渲染未完成', 'warn'); return; }
+  const svgClone = svg.cloneNode(true);
+  // Set explicit size
+  const bbox = svg.viewBox?.baseVal || svg.getBBox?.();
+  if (bbox) {
+    svgClone.setAttribute('width', bbox.width || 1200);
+    svgClone.setAttribute('height', bbox.height || 800);
+  }
+  const serializer = new XMLSerializer();
+  const svgStr = serializer.serializeToString(svgClone);
+  const canvas = document.createElement('canvas');
+  canvas.width = bbox?.width || 1200;
+  canvas.height = bbox?.height || 800;
+  const ctx = canvas.getContext('2d');
+  const img = new Image();
+  const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  img.onload = function() {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0);
+    URL.revokeObjectURL(url);
+    canvas.toBlob(function(b) {
+      const a = document.createElement('a');
+      a.download = '思维导图_' + new Date().toISOString().slice(0,10) + '.png';
+      a.href = URL.createObjectURL(b);
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }, 'image/png');
+  };
+  img.src = url;
+  toast('PNG 导出中...', 'ok');
+}
+
+function exportMindMD() {
+  const e = library.find(x => x.id === currentMindExamId);
+  if (!e || !e.outline) { toast('无数据可导出', 'warn'); return; }
+  let md = '# ' + e.name + '\n\n';
+  function toMD(nodes, depth) {
+    for (const n of nodes) {
+      md += '  '.repeat(depth) + '- **' + n.title + '**';
+      if (n.description) md += ' — ' + n.description;
+      md += '\n';
+      if (n.keyPoints && n.keyPoints.length) {
+        for (const kp of n.keyPoints) {
+          md += '  '.repeat(depth + 1) + '  - ' + kp + '\n';
+        }
+      }
+      if (n.children && n.children.length) toMD(n.children, depth + 1);
+    }
+  }
+  toMD(e.outline, 0);
+  const a = document.createElement('a');
+  a.download = (e.name || '知识大纲') + '.md';
+  a.href = URL.createObjectURL(new Blob([md], { type: 'text/markdown;charset=utf-8' }));
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('Markdown 已导出', 'ok');
+}
+
+// Rebuild mind map if currently viewing
+function refreshMindMap() {
+  if (!currentMindExamId) return;
+  const e = library.find(x => x.id === currentMindExamId);
+  if (!e || !e.outline) return;
+  const mastery = calcNodeMastery(e.outline, e.questions, e.isSubmitted || {}, e.isCorrect || {});
+  buildMindMap(e.outline, mastery);
 }
 
 // ==================== INIT ====================
