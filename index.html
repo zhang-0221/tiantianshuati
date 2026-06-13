@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>喜刷刷</title>
 <style>
 :root {
@@ -293,6 +296,47 @@ textarea::placeholder{color:var(--t3)}
 }
 .mm-node.collapsed>.mm-card::before{background:var(--t3)}
 .mm-node.expanded>.mm-card{z-index:1}
+
+/* Progress Float */
+.prog-float{
+  position:fixed;bottom:20px;right:20px;z-index:400;
+  background:var(--card);border-radius:14px;padding:14px 18px;
+  box-shadow:0 4px 24px rgba(0,0,0,.12);cursor:pointer;
+  display:flex;align-items:center;gap:12px;transition:all .2s;
+  border:1px solid var(--border);user-select:none;
+}
+.prog-float:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,0,0,.16)}
+.prog-float:active{transform:scale(.97)}
+.prog-float .pf-icon{font-size:24px}
+.prog-float .pf-info{text-align:left}
+.prog-float .pf-val{font-size:15px;font-weight:700;color:var(--text)}
+.prog-float .pf-label{font-size:10px;color:var(--t3);margin-top:1px}
+
+/* Progress Detail */
+.prog-detail-modal{max-width:460px;max-height:90vh;overflow-y:auto}
+.prog-detail-modal .pd-stats{display:flex;gap:8px;margin-bottom:14px}
+.prog-detail-modal .pd-stat{flex:1;text-align:center;padding:12px 8px;border-radius:var(--rs);background:var(--bg)}
+.prog-detail-modal .pd-stat .pds-big{font-size:22px;font-weight:700;color:var(--text)}
+.prog-detail-modal .pd-stat .pds-lbl{font-size:10px;color:var(--t3);margin-top:2px}
+.prog-detail-modal .pd-section{margin-top:14px}
+.prog-detail-modal .pd-section .pd-sh{font-size:12px;font-weight:700;color:var(--t2);margin-bottom:8px}
+.chart-row{display:flex;align-items:flex-end;gap:8px;height:100px;padding-top:4px}
+.chart-col{flex:1;display:flex;flex-direction:column;align-items:center;height:100%}
+.chart-bar-wrap{flex:1;width:100%;display:flex;align-items:flex-end}
+.chart-bar{width:100%;border-radius:4px 4px 0 0;background:var(--accent);min-height:3px;transition:height .3s ease}
+.chart-label{font-size:9px;color:var(--t3);margin-top:4px}
+.chart-rate{font-size:9px;color:var(--t2);font-weight:600;margin-bottom:2px}
+.type-acc-row{display:flex;flex-direction:column;gap:6px}
+.type-acc-item{display:flex;align-items:center;gap:8px;font-size:12px}
+.type-acc-item .ta-tag{width:40px;font-size:10px;padding:2px 6px;border-radius:10px;text-align:center;font-weight:600;flex-shrink:0}
+.type-acc-item .ta-bar-wrap{flex:1;height:8px;border-radius:4px;background:var(--border);overflow:hidden}
+.type-acc-item .ta-bar{height:100%;border-radius:4px;transition:width .3s ease}
+.type-acc-item .ta-pct{width:40px;text-align:right;font-weight:600;flex-shrink:0;color:var(--t2)}
+@media(max-width:640px){
+  .prog-float{bottom:12px;right:12px;padding:10px 14px;gap:8px;border-radius:12px}
+  .prog-float .pf-icon{font-size:20px}
+  .prog-float .pf-val{font-size:13px}
+}
 .mind-header .btn-back{flex-shrink:0}
 .mind-detail-card{background:var(--card);border-radius:var(--r);padding:20px;box-shadow:var(--shadow)}
 .mind-detail-card .mind-title{font-size:18px;font-weight:700;margin-bottom:4px}
@@ -489,6 +533,15 @@ textarea::placeholder{color:var(--t3)}
   </main>
 </div>
 
+<!-- Learning Progress Float -->
+<div class="prog-float" id="progFloat" onclick="showProgressDetail()">
+  <span class="pf-icon">📊</span>
+  <div class="pf-info">
+    <div class="pf-val" id="pfToday">0 题</div>
+    <div class="pf-label">今日正确率 --%</div>
+  </div>
+</div>
+
 <!-- Settings Modal -->
 <div class="modal-overlay hidden" id="settingsModal">
   <div class="modal">
@@ -510,6 +563,28 @@ textarea::placeholder{color:var(--t3)}
     <div class="modal-btns">
       <button class="btn btn-s btn-sm" onclick="closeEditModal()">取消</button>
       <button class="btn btn-p btn-sm" onclick="saveQuestionEdit()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Progress Detail Modal -->
+<div class="modal-overlay hidden" id="progressModal">
+  <div class="modal prog-detail-modal">
+    <h3>📊 学习进度</h3>
+    <div class="pd-stats">
+      <div class="pd-stat"><div class="pds-big" id="pdTotal">0</div><div class="pds-lbl">累计刷题</div></div>
+      <div class="pd-stat"><div class="pds-big" id="pdRate">--%</div><div class="pds-lbl">累计正确率</div></div>
+    </div>
+    <div class="pd-section">
+      <div class="pd-sh">近7天刷题</div>
+      <div class="chart-row" id="chartRow"></div>
+    </div>
+    <div class="pd-section">
+      <div class="pd-sh">各题型正确率</div>
+      <div class="type-acc-row" id="typeAccRow"></div>
+    </div>
+    <div class="modal-btns" style="margin-top:14px;">
+      <button class="btn btn-s btn-sm" onclick="closeProgressDetail()">关闭</button>
     </div>
   </div>
 </div>
@@ -559,7 +634,7 @@ textarea::placeholder{color:var(--t3)}
 
 <script>
 // ==================== STATE ====================
-const LS_KEY = 'ttsk_ds_key', LS_LIB = 'ttsk_library';
+const LS_KEY = 'ttsk_ds_key', LS_LIB = 'ttsk_library', LS_PROGRESS = 'ttsk_progress';
 const MAMMOTH_CDNS = [
   'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js',
   'https://unpkg.com/mammoth@1.8.0/mammoth.browser.min.js',
@@ -1254,6 +1329,7 @@ function clickSingle(i) {
   activeExam.userAnswers[oi] = i;
   activeExam.isSubmitted[oi] = true;
   activeExam.isCorrect[oi] = i === activeExam.questions[oi].correctIndex;
+  recordAnswer(activeExam.isCorrect[oi]);
   renderExam(); updateProgress(); checkFinish();
   // Auto-advance if correct and toggle is on
   if (autoAdvance && activeExam.isCorrect[oi] && currentIndex < filteredQuestions.length - 1) {
@@ -1300,7 +1376,7 @@ function selectAll(oi) {
 }
 
 function togM(i) { const oi = origIdx(); if (activeExam.isSubmitted[oi]) return; if (!activeExam.userAnswers[oi]) activeExam.userAnswers[oi] = []; const a = activeExam.userAnswers[oi]; const p = a.indexOf(i); p >= 0 ? a.splice(p, 1) : a.push(i); renderExam(); }
-function subM(oi) { const q = activeExam.questions[oi]; const ua = activeExam.userAnswers[oi] || []; const cs = new Set(q.correctIndexes||[]); activeExam.isSubmitted[oi] = true; activeExam.isCorrect[oi] = cs.size === ua.length && [...cs].every(c => ua.includes(c)); renderExam(); updateProgress(); checkFinish(); }
+function subM(oi) { const q = activeExam.questions[oi]; const ua = activeExam.userAnswers[oi] || []; const cs = new Set(q.correctIndexes||[]); activeExam.isSubmitted[oi] = true; activeExam.isCorrect[oi] = cs.size === ua.length && [...cs].every(c => ua.includes(c)); recordAnswer(activeExam.isCorrect[oi]); renderExam(); updateProgress(); checkFinish(); }
 
 // -- Short --
 function renderShort(area, q, oi, sub) {
@@ -1313,7 +1389,7 @@ function renderShort(area, q, oi, sub) {
   if (!sub) { const t = document.getElementById('shortTA'); if (t) t.addEventListener('input', function() { activeExam.userAnswers[oi] = this.value; const b = document.getElementById('shortSub'); if (b) b.disabled = this.value.trim().length === 0; }); }
 }
 function subShort(oi) { activeExam.isSubmitted[oi] = true; renderExam(); updateProgress(); checkFinish(); }
-function selfEval(oi, c) { activeExam.isCorrect[oi] = c; renderExam(); updateProgress(); checkFinish(); saveExam(activeExam.name); }
+function selfEval(oi, c) { activeExam.isCorrect[oi] = c; recordAnswer(c); renderExam(); updateProgress(); checkFinish(); saveExam(activeExam.name); }
 
 // -- Essay --
 function renderEssay(area, q, oi, sub) {
@@ -1664,6 +1740,108 @@ function saveQuestionEdit() {
   }
   toast('题目已保存');
 }
+// ==================== LEARNING PROGRESS ====================
+let recordedAnswers = new Set();
+
+function recordAnswer(isCorrect) {
+  if (!activeExam) return;
+  const oi = origIdx();
+  if (typeof oi !== 'number' || isNaN(oi)) return;
+  const key = activeExam.id + '-' + oi;
+  if (recordedAnswers.has(key)) return;
+  recordedAnswers.add(key);
+
+  const raw = localStorage.getItem(LS_PROGRESS) || '{"daily":{},"byType":{}}';
+  const progress = JSON.parse(raw);
+  const today = new Date().toISOString().slice(0, 10);
+
+  if (!progress.daily[today]) progress.daily[today] = { total: 0, correct: 0 };
+  progress.daily[today].total++;
+  if (isCorrect) progress.daily[today].correct++;
+
+  const q = activeExam.questions[oi];
+  if (q && q.type) {
+    if (!progress.byType[q.type]) progress.byType[q.type] = { total: 0, correct: 0 };
+    progress.byType[q.type].total++;
+    if (isCorrect) progress.byType[q.type].correct++;
+  }
+
+  localStorage.setItem(LS_PROGRESS, JSON.stringify(progress));
+  updateProgressFloat();
+}
+
+function updateProgressFloat() {
+  const el = document.getElementById('pfToday');
+  const lb = document.querySelector('.prog-float .pf-label');
+  if (!el || !lb) return;
+
+  const raw = localStorage.getItem(LS_PROGRESS);
+  const progress = raw ? JSON.parse(raw) : { daily: {} };
+  const today = new Date().toISOString().slice(0, 10);
+  const td = progress.daily[today];
+  if (td && td.total > 0) {
+    const pct = Math.round(td.correct / td.total * 100);
+    el.textContent = td.total + ' 题';
+    lb.textContent = '今日正确率 ' + pct + '%';
+  } else {
+    el.textContent = '0 题';
+    lb.textContent = '今日正确率 --%';
+  }
+}
+
+function showProgressDetail() {
+  const raw = localStorage.getItem(LS_PROGRESS);
+  const progress = raw ? JSON.parse(raw) : { daily: {}, byType: {} };
+
+  // Cumulative stats
+  let total = 0, correct = 0;
+  Object.values(progress.daily).forEach(d => { total += d.total; correct += d.correct; });
+  document.getElementById('pdTotal').textContent = total;
+  document.getElementById('pdRate').textContent = total > 0 ? Math.round(correct / total * 100) + '%' : '--%';
+
+  // 7-day bar chart
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    const lbl = (i === 0 ? '今天' : (d.getMonth() + 1) + '/' + d.getDate());
+    const dd = progress.daily[key];
+    days.push({ label: lbl, total: dd ? dd.total : 0, correct: dd ? dd.correct : 0 });
+  }
+  const maxTotal = Math.max(...days.map(d => d.total), 1);
+  const chartRow = document.getElementById('chartRow');
+  chartRow.innerHTML = days.map(d => {
+    const h = Math.max(d.total / maxTotal * 90, d.total > 0 ? 8 : 0);
+    const pct = d.total > 0 ? Math.round(d.correct / d.total * 100) + '%' : '';
+    return '<div class="chart-col"><div class="chart-rate">' + (pct || '') + '</div><div class="chart-bar-wrap"><div class="chart-bar" style="height:' + h + 'px;' + (d.total === 0 ? 'opacity:.3' : '') + '"></div></div><div class="chart-label">' + d.label + '</div></div>';
+  }).join('');
+
+  // Per-type accuracy
+  const types = [
+    { key: 'single', label: '单选', cls: 'ta-tag' },
+    { key: 'multiple', label: '多选', cls: 'ta-tag' },
+    { key: 'short', label: '简答', cls: 'ta-tag' },
+    { key: 'essay', label: '论述', cls: 'ta-tag' }
+  ];
+  const typeColors = { single: 'var(--accent)', multiple: 'var(--purple)', short: 'var(--amber)', essay: 'var(--green)' };
+  document.getElementById('typeAccRow').innerHTML = types.map(t => {
+    const d = progress.byType[t.key];
+    const pct = d && d.total > 0 ? Math.round(d.correct / d.total * 100) : 0;
+    const cnt = d ? d.total : 0;
+    return '<div class="type-acc-item"><span class="' + t.cls + '" style="background:' + (typeColors[t.key] + '18') + ';color:' + typeColors[t.key] + '">' + t.label + '</span><span class="ta-bar-wrap"><span class="ta-bar" style="width:' + pct + '%;background:' + typeColors[t.key] + '"></span></span><span class="ta-pct">' + (cnt > 0 ? pct + '%' : '--') + '</span></div>';
+  }).join('');
+
+  document.getElementById('progressModal').classList.remove('hidden');
+}
+
+function closeProgressDetail() {
+  document.getElementById('progressModal').classList.add('hidden');
+}
+
+// Init progress float on load
+updateProgressFloat();
+
 let chatHistory = [];
 const CHAT_SYS = '你是「喜刷刷」应用中的AI学习助手。你的职责是帮助用户解答学习中的疑问。回答要求：1.简洁清晰，用中文回答；2.如果用户有学习资料相关的问题，给出准确解答；3.鼓励用户思考，引导式提问；4.回答长度适中，不要过长。';
 
