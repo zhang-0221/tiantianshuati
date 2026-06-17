@@ -395,6 +395,30 @@ textarea::placeholder{color:var(--t3)}
 .edit-btn{background:none;border:none;cursor:pointer;font-size:12px;padding:2px 6px;border-radius:4px;color:var(--t3);transition:all .12s;margin-left:6px}
 .edit-btn:hover{background:var(--bg);color:var(--accent)}
 
+/* Recite Cards */
+.recite-card-wrap{display:flex;flex-direction:column;gap:16px}
+.recite-card{
+  background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);
+  padding:28px 24px;min-height:240px;transition:all .3s ease;
+  border:1px solid var(--border);user-select:none;
+}
+.recite-card .rc-question{font-size:16px;line-height:1.9;font-weight:500;white-space:pre-wrap;}
+.recite-card .rc-answer{
+  background:var(--amber-l);border-radius:var(--rs);padding:16px 18px;
+  font-size:14px;line-height:1.9;margin-top:16px;white-space:pre-wrap;
+  border-left:3px solid var(--amber);display:none;
+}
+.recite-card.show-answer .rc-answer{display:block}
+.recite-card .rc-answer-label{font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--amber);margin-bottom:6px;}
+.recite-card .rc-tap-hint{font-size:11px;color:var(--t3);text-align:center;margin-top:14px;}
+.recite-card.show-answer .rc-tap-hint{display:none}
+.recite-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.recite-card-header .rc-idx{font-size:12px;color:var(--t3);font-weight:600}
+.recite-card .rc-explanation{font-size:13px;line-height:1.8;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);color:var(--t2)}
+.recite-nav{display:flex;gap:10px;margin-top:8px}
+.recite-nav .btn{flex:1}
+/* Recite import card */
+
 .mind-header{display:flex;align-items:center;gap:10px;margin-bottom:16px}
 .mind-header .btn-back{flex-shrink:0}
 
@@ -695,6 +719,9 @@ textarea::placeholder{color:var(--t3)}
       <button class="sidebar-item" id="navLib" onclick="switchTab('library')">
         <span class="si-icon">📚</span>我的题库
       </button>
+      <button class="sidebar-item" id="navRecite" onclick="switchTab('recite')">
+        <span class="si-icon">📖</span>背诵宝地
+      </button>
       <button class="sidebar-item" id="navMind" onclick="switchTab('mindmap')">
         <span class="si-icon">🧠</span>思维导图
       </button>
@@ -718,11 +745,14 @@ textarea::placeholder{color:var(--t3)}
           <div class="up-text">点击上传或拖拽文件</div>
           <div class="up-hint">支持 .txt / .md / .docx / .pdf</div>
         </div>
-        <input type="file" id="fileInput" accept=".txt,.md,.docx,.pdf" style="display:none" onchange="handleFile(this)">
+        <input type="file" id="fileInput" accept=".txt,.md,.docx,.pdf" style="display:none" multiple onchange="handleFiles(this)">
         <div id="fileBadge" style="display:none;"></div>
         <div class="divider">或者粘贴文本</div>
         <textarea id="materialInput" placeholder="粘贴复习资料……&#10;换行分隔不同知识点效果更好"></textarea>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;">
+        <div style="display:flex;align-items:center;gap:12px;margin-top:10px;flex-wrap:wrap;">
+          <label class="toggle-wrap" style="font-size:13px;color:var(--text);gap:8px;">
+            <input type="checkbox" id="bigQuestionsToggle" checked style="width:16px;height:16px;accent-color:var(--accent);"> 生成大题（简答+论述 → 背诵宝地）
+          </label>
           <label class="toggle-wrap" style="font-size:13px;color:var(--text);gap:8px;">
             <input type="checkbox" id="outlineToggle" style="width:16px;height:16px;accent-color:var(--accent);"> 同时生成知识大纲（思维导图）
           </label>
@@ -756,6 +786,35 @@ textarea::placeholder{color:var(--t3)}
       <div id="detailView" style="display:none;"></div>
       <!-- 子视图：刷题 -->
       <div id="quizView" style="display:none;"></div>
+    </div>
+
+    <!-- Tab: 背诵宝地 -->
+    <div class="tab-content" id="tabRecite">
+      <div id="reciteListView">
+        <!-- 背诵专用导入卡片 -->
+        <div class="card" style="margin-bottom:14px;" id="reciteImportCard">
+          <div class="card-hd" onclick="toggleReciteImport()" style="cursor:pointer;user-select:none;">
+            📥 导入背诵资料 <span class="card-tag" id="reciteImportArrow">▼</span>
+          </div>
+          <div id="reciteImportBody">
+            <div class="upload-zone" id="reciteUploadZone" onclick="document.getElementById('reciteFileInput').click()">
+              <div class="up-icon">📄</div>
+              <div class="up-text">点击上传或拖拽文件</div>
+              <div class="up-hint">支持 .txt / .md / .docx / .pdf</div>
+            </div>
+            <input type="file" id="reciteFileInput" accept=".txt,.md,.docx,.pdf" style="display:none" onchange="handleReciteFile(this)">
+            <div id="reciteFileBadge" style="display:none;"></div>
+            <div class="divider">或者粘贴文本</div>
+            <textarea id="reciteMaterialInput" placeholder="粘贴需要背诵的复习资料……&#10;换行分隔不同知识点效果更好"></textarea>
+            <button class="btn btn-p" id="reciteGenBtn" onclick="generateReciteExam()">📖 生成背诵题目（仅简答+论述）</button>
+            <div id="reciteGenStatus"></div>
+          </div>
+        </div>
+        <div class="card-hd" style="margin-bottom:12px;">📖 我的背诵 <span class="card-tag" id="reciteCount"></span></div>
+        <div class="lib-list" id="reciteGrid"></div>
+        <div class="empty-state" id="reciteEmpty">还没有背诵卡片，在上方导入资料即可生成</div>
+      </div>
+      <div id="reciteCardView" style="display:none;"></div>
     </div>
 
     <!-- Tab: 思维导图 -->
@@ -949,8 +1008,14 @@ let activeExam = null;
 let filteredQuestions = [];
 let currentIndex = 0;
 let autoAdvance = true;
+let memorizeMode = false; // false=刷题模式, true=背题模式
 let mergeMode = false;
 let mergeSelected = new Set();
+
+// Recite state
+let reciteExamId = null;
+let reciteQuestions = [];
+let reciteIndex = 0;
 
 // ==================== TOAST ====================
 function toast(msg, type) {
@@ -972,10 +1037,13 @@ function toggleSidebar() {
 function switchTab(tab) {
   document.getElementById('tabImport').classList.toggle('active', tab === 'import');
   document.getElementById('tabLibrary').classList.toggle('active', tab === 'library');
+  document.getElementById('tabRecite').classList.toggle('active', tab === 'recite');
   document.getElementById('tabMindmap').classList.toggle('active', tab === 'mindmap');
   document.getElementById('navImport').classList.toggle('active', tab === 'import');
   document.getElementById('navLib').classList.toggle('active', tab === 'library');
+  document.getElementById('navRecite').classList.toggle('active', tab === 'recite');
   document.getElementById('navMind').classList.toggle('active', tab === 'mindmap');
+  if (tab === 'recite') renderReciteList();
   if (tab === 'mindmap') renderMindList();
   // Exit merge mode when leaving library tab
   if (tab !== 'library' && mergeMode) {
@@ -1248,13 +1316,15 @@ function renderLib() {
   grid.innerHTML = library.map((e, idx) => {
     const d = new Date(e.createdAt);
     const ds = d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate();
-    const s = e.summary || { total: e.questions.length, done: 0, correct: 0 };
+    const smallQ = e.questions.filter(q => q.type === 'single' || q.type === 'multiple' || q.type === 'tf');
+    const smallTotal = smallQ.length;
+    const smallDone = smallQ.filter(q => e.isSubmitted && e.isSubmitted[q.id]).length;
     const isSel = mergeSelected.has(e.id);
     return `<div class="lib-item${mergeM ? ' merge-mode' : ''}${isSel ? ' merge-selected' : ''}" onclick="${mergeM ? `toggleMergeSelect('${e.id}', this)` : `showExamDetail('${e.id}')`}" style="cursor:pointer;">
       <div class="merge-check">✓</div>
       <div class="lib-info">
         <div class="lib-name">${escH(e.name)}</div>
-        <div class="lib-meta">${ds} · ${s.total}题 · ${s.done ? s.done+'题已答' : '未开始'}</div>
+        <div class="lib-meta">${ds} · ${smallTotal}题 · ${smallDone ? smallDone+'题已答' : '未开始'}</div>
       </div>
       <div class="lib-actions">
         ${mergeM ? '' : `<button class="btn btn-s btn-xs" onclick="event.stopPropagation();renameLibExam('${e.id}')" title="重命名">✏️</button>
@@ -1271,11 +1341,16 @@ let detailMode = null; // 'sequential' | 'random' | 'wrong'
 function showExamDetail(id) {
   const e = library.find(x => x.id === id); if (!e) return;
   detailExamId = id; detailMode = null;
-  const s = e.summary || { total: e.questions.length, done: 0, correct: 0 };
-  const cutWrong = e.cutWrong || {};
   const submitted = e.isSubmitted || {}, correct = e.isCorrect || {};
+  // Compute small-question (single/multiple/tf) stats for detail view
+  const smallQs = e.questions.filter(q => q.type === 'single' || q.type === 'multiple' || q.type === 'tf');
+  const bigQs = e.questions.filter(q => q.type === 'short' || q.type === 'essay');
+  const sTotal = smallQs.length;
+  const sDone = smallQs.filter(q => submitted[q.id]).length;
+  const sCorrect = smallQs.filter(q => submitted[q.id] && correct[q.id]).length;
+  const cutWrong = e.cutWrong || {};
   let wrongRemain = 0;
-  for (const q of e.questions) {
+  for (const q of smallQs) {
     if (submitted[q.id] && !correct[q.id] && !cutWrong[q.id]) wrongRemain++;
   }
   const d = new Date(e.createdAt);
@@ -1293,12 +1368,12 @@ function showExamDetail(id) {
         <button class="btn-rename" onclick="event.stopPropagation();renameLibExam('${e.id}')">✏️ 重命名</button>
       </div>
       <h2 class="detail-white-name">${escH(e.name)}</h2>
-      <div class="detail-white-meta">${ds} · ${s.total}题</div>
+      <div class="detail-white-meta">${ds} · ${sTotal}题${bigQs.length > 0 ? ' + ' + bigQs.length + '道大题' : ''}</div>
       <div class="detail-white-stats">
-        <div class="detail-white-stat"><div class="dws-val">${s.total}</div><div class="dws-lbl">总题</div></div>
-        <div class="detail-white-stat"><div class="dws-val">${s.done}</div><div class="dws-lbl">已答</div></div>
-        <div class="detail-white-stat"><div class="dws-val">${s.correct}</div><div class="dws-lbl">正确</div></div>
-        <div class="detail-white-stat dws-accent"><div class="dws-val">${s.done > 0 ? Math.round(s.correct / s.done * 100) + '%' : '--'}</div><div class="dws-lbl">正确率</div></div>
+        <div class="detail-white-stat"><div class="dws-val">${sTotal}</div><div class="dws-lbl">小题</div></div>
+        <div class="detail-white-stat"><div class="dws-val">${sDone}</div><div class="dws-lbl">已答</div></div>
+        <div class="detail-white-stat"><div class="dws-val">${sCorrect}</div><div class="dws-lbl">正确</div></div>
+        <div class="detail-white-stat dws-accent"><div class="dws-val">${sDone > 0 ? Math.round(sCorrect / sDone * 100) + '%' : '--'}</div><div class="dws-lbl">正确率</div></div>
       </div>
     </div>
 
@@ -1311,10 +1386,10 @@ function showExamDetail(id) {
         </button>
         <div class="type-practice-grid" id="typePracticeGrid">
           ${(() => {
-            const typeLabels = {single:'单选题', multiple:'多选题', tf:'判断题', short:'简答题', essay:'论述题'};
-            const typeIcons  = {single:'🔘', multiple:'☑️', tf:'✅', short:'📝', essay:'📄'};
-            const typeCss    = {single:'tpc-single', multiple:'tpc-multiple', tf:'tpc-tf', short:'tpc-short', essay:'tpc-essay'};
-            const typeColors = {single:'var(--accent)', multiple:'var(--amber)', tf:'var(--teal)', short:'var(--green)', essay:'var(--purple)'};
+            const typeLabels = {single:'单选题', multiple:'多选题', tf:'判断题'};
+            const typeIcons  = {single:'🔘', multiple:'☑️', tf:'✅'};
+            const typeCss    = {single:'tpc-single', multiple:'tpc-multiple', tf:'tpc-tf'};
+            const typeColors = {single:'var(--accent)', multiple:'var(--amber)', tf:'var(--teal)'};
             return Object.entries(typeLabels).map(([k, v]) => {
               const typeQs = e.questions.filter(q => q.type === k);
               const n = typeQs.length;
@@ -1363,6 +1438,17 @@ function showExamDetail(id) {
           </div>
         </div>
       </div>
+      ${bigQs.length > 0 ? `
+      <div class="detail-section">
+        <div class="detail-section-title">📖 背诵宝地</div>
+        <div class="mode-row">
+          <div class="mode-btn" onclick="switchTab('recite');openReciteExam('${e.id}')" style="border-color:var(--purple);">
+            <div class="mode-icon">📖</div>
+            <div class="mode-label">查看大题 · ${bigQs.length}</div>
+            <div class="mode-hint">${bigQs.filter(q => q.type === 'short').length} 简答 · ${bigQs.filter(q => q.type === 'essay').length} 论述</div>
+          </div>
+        </div>
+      </div>` : ''}
     </div>
   `;
 }
@@ -1453,9 +1539,9 @@ function renameLibExam(id) {
 function startPractice(id, mode, reset) {
   const e = library.find(x => x.id === id); if (!e) return;
   let reviewMode = null;
-  // Keep original questions from library (never shuffle the stored order)
-  let questions = [...e.questions];
-
+  // Only use small questions (single/multiple/tf) for practice
+  let questions = e.questions.filter(q => q.type === 'single' || q.type === 'multiple' || q.type === 'tf');
+  if (!questions.length) { toast('该试卷暂无选择题/判断题', 'err'); return; }
   if (mode === 'wrong') {
     const submitted = e.isSubmitted || {}, correct = e.isCorrect || {}, cut = e.cutWrong || {};
     questions = questions.filter(q => submitted[q.id] && !correct[q.id] && !cut[q.id]);
@@ -1527,54 +1613,78 @@ function backToLibFromDetail() {
 // ==================== FILE UPLOAD ====================
 document.getElementById('uploadZone').addEventListener('dragover', e => { e.preventDefault(); e.currentTarget.classList.add('dragover'); });
 document.getElementById('uploadZone').addEventListener('dragleave', e => e.currentTarget.classList.remove('dragover'));
-document.getElementById('uploadZone').addEventListener('drop', function(e) { e.preventDefault(); this.classList.remove('dragover'); const f = e.dataTransfer.files[0]; if (f) processFile(f); });
-function handleFile(input) { const f = input.files[0]; if (f) processFile(f); }
+document.getElementById('uploadZone').addEventListener('drop', function(e) { e.preventDefault(); this.classList.remove('dragover'); if (e.dataTransfer.files.length) processFiles(Array.from(e.dataTransfer.files)); });
+// Recite import drag-drop
+document.getElementById('reciteUploadZone').addEventListener('dragover', e => { e.preventDefault(); e.currentTarget.classList.add('dragover'); });
+document.getElementById('reciteUploadZone').addEventListener('dragleave', e => e.currentTarget.classList.remove('dragover'));
+document.getElementById('reciteUploadZone').addEventListener('drop', function(e) { e.preventDefault(); this.classList.remove('dragover'); const f = e.dataTransfer.files[0]; if (f) handleReciteFileRaw(f); });
+function handleReciteFileRaw(file) {
+  processReciteFileGetText(file).then(text => {
+    document.getElementById('reciteMaterialInput').value = text;
+    const badge = document.getElementById('reciteFileBadge');
+    badge.style.display = 'inline-flex'; badge.className = 'file-badge'; badge.textContent = '📄 ' + file.name;
+  }).catch(err => { toast('文件解析失败：' + err.message, 'err'); });
+}
+document.getElementById('reciteFileInput').addEventListener('change', function() { if (this.files[0]) handleReciteFileRaw(this.files[0]); });
+async function handleFiles(input) { if (input.files.length) { await processFiles(Array.from(input.files)); input.value = ''; } }
+async function processFiles(files) {
+  if (!files.length) return;
+  const ta = document.getElementById('materialInput'), badge = document.getElementById('fileBadge');
+  let total = 0, ok = 0, names = [];
+  for (let i = 0; i < files.length; i++) {
+    const f = files[i];
+    const text = await processFileGetText(f);
+    if (text) {
+      if (ta.value && i === 0) ta.value = ''; // clear on first successful file
+      ta.value = ta.value ? ta.value + '\n\n---\n\n' + text : text;
+      names.push(f.name); ok++;
+    }
+    total++;
+  }
+  if (ok > 0) {
+    badge.style.display = 'inline-flex'; badge.className = 'file-badge';
+    badge.textContent = '📄 ' + ok + '/' + total + ' 个文件已导入';
+    toast('已导入 ' + ok + ' 个文件', 'ok');
+  }
+}
 
 let mammothLoaded = false, mammothLoading = false;
 let pdfjsLoaded = false, pdfjsLoading = false;
-async function processFile(file) {
+async function processFileGetText(file) {
   const ext = file.name.split('.').pop().toLowerCase();
-  const ta = document.getElementById('materialInput'), badge = document.getElementById('fileBadge');
   if (ext === 'txt' || ext === 'md' || ext === 'csv') {
-    const r = new FileReader();
-    r.onload = e => { ta.value = e.target.result; badge.style.display = 'inline-flex'; badge.className = 'file-badge'; badge.textContent = '📄 ' + file.name; };
-    r.readAsText(file, 'UTF-8'); return;
+    return new Promise(resolve => {
+      const r = new FileReader();
+      r.onload = e => resolve(e.target.result);
+      r.onerror = () => resolve('');
+      r.readAsText(file, 'UTF-8');
+    });
   }
   if (ext === 'docx') {
     if (!mammothLoaded) {
-      if (mammothLoading) { toast('解析器加载中，请稍后', 'info'); return; }
+      if (mammothLoading) { toast('DOCX解析器加载中，请稍后', 'info'); return ''; }
       mammothLoading = true; toast('加载 DOCX 解析器……', 'info');
       let ok = false;
       for (const url of MAMMOTH_CDNS) { try { await loadScript(url); ok = true; break; } catch {} }
       mammothLoading = false;
-      if (!ok) { toast('DOCX 解析器加载失败，请检查网络', 'err'); return; }
+      if (!ok) { toast('DOCX 解析器加载失败，请检查网络', 'err'); return ''; }
       mammothLoaded = true;
     }
     try {
       const buf = await file.arrayBuffer();
       const result = await mammoth.extractRawText({ arrayBuffer: buf });
-      ta.value = result.value.trim();
-      badge.style.display = 'inline-flex'; badge.className = 'file-badge'; badge.textContent = '📄 ' + file.name + ' (已解析)';
-      toast('DOCX 解析成功', 'ok');
-    } catch (err) { toast('DOCX 解析失败：' + err.message, 'err'); }
-    return;
+      return result.value.trim();
+    } catch (err) { toast('DOCX 解析失败：' + err.message, 'err'); return ''; }
   }
   if (ext === 'pdf') {
     if (!pdfjsLoaded) {
-      if (pdfjsLoading) { toast('解析器加载中，请稍后', 'info'); return; }
+      if (pdfjsLoading) { toast('PDF解析器加载中，请稍后', 'info'); return ''; }
       pdfjsLoading = true; toast('加载 PDF 解析器……', 'info');
       let ok = false;
       for (const url of PDFJS_CDNS) { try { await loadScript(url); ok = true; break; } catch {} }
-      if (!ok) { pdfjsLoading = false; toast('PDF 解析器加载失败，请检查网络', 'err'); return; }
-      // Load worker
-      for (const url of PDFJS_WORKER_CDNS) {
-        try {
-          pdfjsLib.GlobalWorkerOptions.workerSrc = url;
-          break;
-        } catch {}
-      }
-      pdfjsLoading = false;
-      pdfjsLoaded = true;
+      if (!ok) { pdfjsLoading = false; toast('PDF 解析器加载失败，请检查网络', 'err'); return ''; }
+      for (const url of PDFJS_WORKER_CDNS) { try { pdfjsLib.GlobalWorkerOptions.workerSrc = url; break; } catch {} }
+      pdfjsLoading = false; pdfjsLoaded = true;
     }
     try {
       const buf = await file.arrayBuffer();
@@ -1584,16 +1694,12 @@ async function processFile(file) {
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
         const content = await page.getTextContent();
-        const pageText = content.items.map(item => item.str).join(' ');
-        fullText += pageText + '\n';
+        fullText += content.items.map(item => item.str).join(' ') + '\n';
       }
-      ta.value = fullText.trim();
-      badge.style.display = 'inline-flex'; badge.className = 'file-badge'; badge.textContent = '📄 ' + file.name + ' (已解析)';
-      toast('PDF 解析成功（' + pdf.numPages + ' 页）', 'ok');
-    } catch (err) { toast('PDF 解析失败：' + err.message, 'err'); }
-    return;
+      return fullText.trim();
+    } catch (err) { toast('PDF 解析失败：' + err.message, 'err'); return ''; }
   }
-  toast('不支持 .' + ext + ' 格式', 'err');
+  toast('不支持 .' + ext + ' 格式', 'err'); return '';
 }
 function loadScript(url) { return new Promise((resolve, reject) => { const s = document.createElement('script'); s.src = url; s.onload = resolve; s.onerror = reject; document.head.appendChild(s); }); }
 
@@ -1611,6 +1717,8 @@ async function generateExam() {
 
   const btn = document.getElementById('genBtn'), status = document.getElementById('genStatus');
   const includeOutline = document.getElementById('outlineToggle').checked;
+  const includeBigQuestions = document.getElementById('bigQuestionsToggle').checked;
+  const genOptions = { includeOutline, includeBigQuestions };
   btn.disabled = true; btn.textContent = 'AI 生成中……';
   status.innerHTML = '<div class="loading"><div class="spinner"></div>连接 DeepSeek……</div>';
 
@@ -1625,13 +1733,13 @@ async function generateExam() {
 
       for (let ci = 0; ci < chunks.length; ci++) {
         status.innerHTML = '<div class="loading"><div class="spinner"></div>AI 正在出题：第 ' + (ci+1) + '/' + chunks.length + ' 段……</div>';
-        const result = await callAI(chunks[ci], '请根据以下学习资料生成考试题目，尽量覆盖本段所有知识点：\n\n' + chunks[ci], false);
+        const result = await callAI(chunks[ci], '请根据以下学习资料生成考试题目，尽量覆盖本段所有知识点：\n\n' + chunks[ci], { includeOutline: false, includeBigQuestions: genOptions.includeBigQuestions });
         allQuestions = allQuestions.concat(result.questions);
       }
     } else {
       // Single call for smaller materials
       status.innerHTML = '<div class="loading"><div class="spinner"></div>AI 正在分析资料并生成题目' + (includeOutline ? '和知识大纲' : '') + '……</div>';
-      const result = await callAI(material, '请根据以下学习资料生成考试题目，覆盖资料中所有知识点：\n\n' + material, includeOutline);
+      const result = await callAI(material, '请根据以下学习资料生成考试题目，覆盖资料中所有知识点：\n\n' + material, genOptions);
       allQuestions = result.questions;
       outline = result.outline || null;
     }
@@ -1689,8 +1797,19 @@ function splitIntoChunks(text, targetSize) {
 }
 
 // Call DeepSeek API and parse questions (and optionally outline) from response
-async function callAI(materialChunk, userMsg, includeOutline) {
-  const sysPrompt = includeOutline ? SYS_PROMPT_OUTLINE + MINDMAP_QUALITY_PROMPT : SYS_PROMPT;
+async function callAI(materialChunk, userMsg, options) {
+  const includeOutline = options && options.includeOutline;
+  const includeBigQuestions = options ? options.includeBigQuestions !== false : true;
+  let basePrompt = includeOutline ? (SYS_PROMPT_OUTLINE + MINDMAP_QUALITY_PROMPT) : SYS_PROMPT;
+  // If big questions disabled, append instruction to skip short/essay
+  if (!includeBigQuestions) {
+    basePrompt += '\n\n## ⚠️ 本次限制：不生成大题\n用户选择只生成选择题型（小题）。本次只生成 single、multiple、tf 三种题型，严禁生成 short 和 essay。\n题型比例调整为：single 约55%、multiple 约30%、tf 约15%。覆盖资料知识点的出题数量不变——原本用于大题的知识点改为出选择题。';
+  }
+  // reciteOnly: only generate short + essay (no single/multiple/tf)
+  if (options && options.reciteOnly) {
+    basePrompt += '\n\n## ⚠️ 本次限制：只生成背诵大题\n用户选择只生成背诵大题。本次只生成 short（简答题）和 essay（论述题）两种题型，严禁生成 single、multiple、tf。简答约60%、论述约40%。\n每道题的 referenceAnswer 必须完整、准确、结构清晰，可作为背诵范本。题目必须覆盖资料中的所有核心知识点。';
+  }
+  const sysPrompt = basePrompt;
   const resp = await fetchTimeout('https://api.deepseek.com/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
@@ -1908,82 +2027,89 @@ function repairJSON(s) {
   return null;
 }
 
-const SYS_PROMPT = `你是专业考试出题系统。根据用户提供的学习资料生成高质量题目。
+const SYS_PROMPT = `你是一个严谨的考试出题系统。你的唯一任务是根据用户提供的学习资料生成高质量考试题目。
 
-## 铁律（最重要）
-- 题目必须100%基于用户提供的资料，禁止编造任何资料中不存在的内容
-- 如果资料信息不足以支撑某道题，宁可不生成那道题
-- 题干、选项、解析中涉及的知识点必须能在资料原文中找到依据
+## ⚠️ 核心铁律（违反即失败）
+1. **100%基于资料**：题干、选项、解析、参考答案中的每一个知识点，必须能在资料原文中找到直接依据。这是硬性要求，不可通融。
+2. **宁缺毋滥**：如果某部分资料信息不足以支撑一道完整的题，宁可跳过不生成，也绝不编造。
+3. **原文化用**：题目的表述可以改写、概括、提炼，但背后的知识点必须来自资料。不可引入资料中没有的概念、术语、人名、数据、公式。
+4. **解析引文**：解析必须指出知识点在资料中的出处或依据，不能凭空解释。
 
-## 题型分配
-- "single" 单选题（约35%）：概念辨析。4选项，1正确答案。
-- "multiple" 多选题（约20%）：特征列举。4-6选项，2-4正确答案。
-- "tf" 判断题（约15%）：判断陈述正误。2选项（正确/错误），1正确答案。correctIndex=0表示正确，correctIndex=1表示错误。
-- "short" 简答题（约15%）：名词解释。提供参考答案。
-- "essay" 论述题（约15%）：综合分析。提供参考要点。
+## 题型与分布
 
-## 要求
-1. 正确选项准确，错误选项有迷惑性但明确错误
-2. 判断题的选项固定为["正确","错误"]，不可更改
-3. 解析简短（1-2句），引用原文
-4. question不包含选项，选项独立在options数组
-5. 只输出JSON，不要任何解释或前言
+### 选择题型（"小题" — 在题库中刷题练习）
+- **"single" 单选题（约40%）**：考察关键概念的精确理解。4个选项，1个正确答案。错误选项要有迷惑性——似是而非、张冠李戴、偷换概念——但必须明确错误。
+- **"multiple" 多选题（约25%）**：考察知识点的完整性。4-6个选项，2-4个正确答案。正确选项之间应有关联（同属一个分类/特征/步骤），错误选项应是与正确选项同领域的干扰项。
+- **"tf" 判断题（约15%）**：考察细节辨析。只允许["正确","错误"]两个选项。陈述要设计得容易混淆——比如把必要条件说成充分条件、把部分说成全部、把相关说成因果。correctIndex=0表示正确，correctIndex=1表示错误。
 
-## JSON格式（严格）
-{"questions":[{"type":"single","question":"...","options":["A","B","C","D"],"correctIndex":0,"explanation":"简短的解析"},{"type":"multiple","question":"...","options":["A","B","C","D","E"],"correctIndexes":[0,2],"explanation":"简短的解析"},{"type":"tf","question":"...","options":["正确","错误"],"correctIndex":0,"explanation":"简短的解析"},{"type":"short","question":"...","referenceAnswer":"...","explanation":"简短的解析"},{"type":"essay","question":"...","referenceAnswer":"...","explanation":"简短的解析"}]}`;
+### 大题（在背诵宝地中作为知识卡片）
+- **"short" 简答题（约10%）**：考察核心概念的理解和表述。题目应引导回答"是什么""为什么""怎么做"。referenceAnswer应完整、准确、可作为背诵模板。
+- **"essay" 论述题（约10%）**：考察综合分析和逻辑组织能力。题目应要求联系多个知识点。referenceAnswer应结构清晰（分点、有层次），便于比对自评。
 
-const SYS_PROMPT_OUTLINE = `你是专业考试出题系统。根据用户提供的学习资料生成高质量题目和详细知识大纲。
+## 出题原则
+1. **覆盖重点**：优先从资料的核心概念、关键定义、重要分类、易混淆点中出题
+2. **选项质量**：错误选项不是随机拼凑，而是要反映常见误解或易混淆概念
+3. **题干清晰**：问题表述明确无歧义，不出现"下列哪个不正确"的双重否定（改为"下列哪个是错误的理解"）
+4. **解析价值**：解析不只是说"对/错"，而要简明指出正确的原因，引用原文依据
+5. **判断题质量**：不要出太明显的判断题（如"地球是圆的"），要出需要结合上下文才能判断的题目
 
-## 铁律（最重要）
-- 题目和知识大纲必须100%基于用户提供的资料，禁止编造任何资料中不存在的内容
-- 如果资料信息不足以支撑某道题或某个知识点，宁可不生成
-- 题干、选项、解析、大纲中涉及的知识点必须能在资料原文中找到依据
+## 输出格式
+只输出一个JSON对象，不要任何解释、前言或后记：
+{"questions":[{"type":"single","question":"题干（不含选项）","options":["A选项","B选项","C选项","D选项"],"correctIndex":0,"explanation":"解析：在资料【第X部分】中提到……因此A正确，B错误是因为……"},{"type":"multiple","question":"题干（不含选项）","options":["A","B","C","D","E"],"correctIndexes":[0,2],"explanation":"解析：……"},{"type":"tf","question":"题干","options":["正确","错误"],"correctIndex":0,"explanation":"解析：……"},{"type":"short","question":"请简述……","referenceAnswer":"参考答案要点：1.……2.……3.……","explanation":"解析：本题考查……源于资料……"},{"type":"essay","question":"试论述……","referenceAnswer":"参考要点：\\n一、……\\n二、……\\n三、……","explanation":"解析：……"}]}`;
 
-## 题型分配
-- "single" 单选题（约35%）：概念辨析。4选项，1正确答案。
-- "multiple" 多选题（约20%）：特征列举。4-6选项，2-4正确答案。
-- "tf" 判断题（约15%）：判断陈述正误。2选项（正确/错误），1正确答案。correctIndex=0表示正确，correctIndex=1表示错误。
-- "short" 简答题（约15%）：名词解释。提供参考答案。
-- "essay" 论述题（约15%）：综合分析。提供参考要点。
+const SYS_PROMPT_OUTLINE = `你是一个严谨的考试出题系统。你的唯一任务是根据用户提供的学习资料生成高质量考试题目和知识大纲。
 
-## 知识大纲（非常重要：务必详细）
-根据资料层级结构，生成详细树状知识大纲，深度至少4-5层。要求：
-- 覆盖资料中所有主要知识点，尽量展开到最基本的概念和定义
-- 大纲节点总数至少25个，越多越好，知识覆盖越完整越好
-- 每个节点必须包含以下字段：
-  - "id"（字符串，从"n0"开始递增编号，如"n0","n1","n2"...）
-  - "title"（标题，12字以内，简洁准确）
-  - "description"（一句话描述核心内容，20字以内，每个节点必须有）
-  - "keyPoints"（关键要点数组，叶子节点至少2-4个要点，非叶子节点可为空数组[]）
-  - "children"（子节点数组，叶子节点为空数组[]）
-- 末级节点（叶子）必须是具体概念、关键定义、重要公式名称等，不可空洞
-- 确保每个知识点展开到最细致的基本概念单元
+## ⚠️ 核心铁律（违反即失败）
+1. **100%基于资料**：题目、大纲中的每一个知识点，必须能在资料原文中找到直接依据。这是硬性要求，不可通融。
+2. **宁缺毋滥**：如果某部分资料信息不足以支撑一道完整的题或一个有价值的知识节点，宁可跳过不生成，也绝不编造。
+3. **原文化用**：表述可以改写概括提炼，但知识点必须来自资料。不可引入资料中没有的概念、术语、人名、数据、公式。
+4. **解析引文**：题目解析必须指出知识点在资料中的出处或依据；大纲节点必须能从资料中找到对应段落。
 
-## 题目关联
-- 每道题必须包含 "outlineNodeId" 字段，值为其所属大纲节点的id
-- 确保每个有题目的节点至少有一道关联题
+## 题型与分布
 
-## 要求
-1. 正确选项准确，错误选项有迷惑性但明确错误
-2. 解析简短（1-2句），引用原文
-3. question不包含选项，选项独立在options数组
-4. 判断题的选项固定为["正确","错误"]，不可更改
-5. 大纲深度充足、不空洞，末级节点充实有keyPoints
-6. 只输出JSON，不要任何解释或前言
+### 选择题型（"小题" — 在题库中刷题练习）
+- **"single" 单选题（约40%）**：考察关键概念的精确理解。4个选项，1个正确答案。错误选项要有迷惑性——似是而非、张冠李戴、偷换概念——但必须明确错误。
+- **"multiple" 多选题（约25%）**：考察知识点的完整性。4-6个选项，2-4个正确答案。正确选项之间应有关联，错误选项应是与正确选项同领域的干扰项。
+- **"tf" 判断题（约15%）**：考察细节辨析。只允许["正确","错误"]两个选项。陈述要设计得容易混淆。correctIndex=0表示正确，correctIndex=1表示错误。
 
-## JSON格式（严格）
-{"questions":[{"type":"single","question":"题干","options":["A","B","C","D"],"correctIndex":0,"outlineNodeId":"n3","explanation":"解析"},{"type":"tf","question":"题干","options":["正确","错误"],"correctIndex":0,"outlineNodeId":"n5","explanation":"解析"}],"outline":[{"id":"n0","title":"第一章概述","description":"介绍基本概念和整体框架","keyPoints":[],"children":[{"id":"n1","title":"核心定义","description":"XX的定义及其本质特征","keyPoints":["要点1：XX是...","要点2：XX包含...","要点3：XX的关键在于..."],"children":[]}]}]}`;
+### 大题（在背诵宝地中作为知识卡片）
+- **"short" 简答题（约10%）**：考察核心概念的理解和表述。referenceAnswer应完整准确，可作为背诵模板。
+- **"essay" 论述题（约10%）**：考察综合分析和逻辑组织能力。referenceAnswer应结构清晰（分点、有层次）。
+
+## 出题原则
+1. 优先从资料的核心概念、关键定义、重要分类、易混淆点中出题
+2. 错误选项要反映常见误解或易混淆概念，不是随机拼凑
+3. 题干表述明确无歧义，避免双重否定
+4. 解析简明指出正确原因，引用原文依据
+5. 判断题要出需要结合上下文才能判断的题目
+6. 每道题必须包含 "outlineNodeId" 字段，值为其所属大纲节点的id
+
+## 知识大纲（与题目同等重要）
+根据资料结构，生成一个可以用于思维导图的知识大纲。
+
+要求：
+- 深度至少4层，节点总数至少30个（资料越丰富，节点应越多）
+- 层级结构：章节/主题 → 知识模块 → 具体概念/机制/规则/步骤/对比 → 定义/条件/例外/常见错误/考点
+- 每个叶子节点必须有2-4个具体的keyPoints
+- 每个节点包含：id（"n0"开始递增）、title（≤12字，精确不泛化）、description（≤20字，一句话说清核心）、keyPoints、children
+- 避免空洞标题如"其他""总结""概述""相关知识点""注意事项"
+- 确保大纲覆盖资料中每一个主要知识点，不要遗漏
+
+## 输出格式
+只输出一个JSON对象，不要任何解释：
+{"questions":[...],"outline":[{"id":"n0","title":"第一章 概述","description":"介绍核心概念与框架","keyPoints":[],"children":[{"id":"n1","title":"核心定义","description":"XX的本质特征与内涵","keyPoints":["XX的定义是...","XX包含三个要素...","XX的关键特征在于..."],"children":[]}]}]}`;
 
 const MINDMAP_QUALITY_PROMPT = `
 
-## Mind map quality upgrade
-- Build a dense traditional horizontal mind map, not a brief outline.
-- For substantial material, target at least 40 outline nodes and at least 4 levels of depth.
-- Use this hierarchy when the source allows it: chapter/topic -> knowledge module -> concrete concept/mechanism/rule/procedure/comparison -> definition/condition/step/exception/common mistake/exam angle.
-- Every leaf node must be a concrete learnable point and should include 2-4 keyPoints.
-- Avoid vague node titles such as "other", "related content", "summary", "overview", "misc", "知识点", "相关内容", "总结".
-- Keep all content grounded in the provided material. Do not invent knowledge not present in the source.
-- Link each question to the most specific outline node with outlineNodeId.
+## 思维导图增强要求（极其重要）
+- 这不是简单的目录提纲，而是一个密集的知识网络导图。每个节点都应有学习价值。
+- 资料越丰富，大纲应越详细。对于有一定长度的资料（>800字），节点总数不少于40个，深度不少于4层。
+- 层级递进规则：主题层 → 模块层 → 概念/机制/规则/流程/对比 → 定义/条件/步骤/例外/常见误区/考点
+- 叶子节点 = 可直接背诵的知识点。每个叶子必须有2-4个keyPoints，每条要点用一句话讲清一个知识点。
+- 严禁出现以下空洞标题："其他"、"相关内容"、"总结"、"概述"、"补充"、"注意事项"、"附加知识点"、"杂项"——这类标题没有信息量，对学习者毫无价值。
+- 如果资料有章节/段落结构，大纲应体现这种结构。如果没有，则按知识点的内在逻辑自行组织层级。
+- 所有大纲内容必须100%来自资料，不添加资料中没有的知识。
+- 确保每个有题目的节点至少关联一道题（通过outlineNodeId）。
 `;
 
 // ==================== QUIZ RENDER ====================
@@ -1997,6 +2123,10 @@ function renderQuizTab() {
       <div class="toggle-wrap" onclick="toggleAutoAdvance()">
         <span>自动跳转</span>
         <div class="toggle-switch${autoAdvance ? ' on' : ''}" id="autoToggle"></div>
+      </div>
+      <div class="toggle-wrap" onclick="toggleMemorizeMode()">
+        <span>${memorizeMode ? '🧠 背题' : '✏️ 刷题'}</span>
+        <div class="toggle-switch${memorizeMode ? ' on' : ''}" id="memorizeToggle"></div>
       </div>
     </div>
     <div class="type-tabs" id="typeTabs"></div>
@@ -2038,8 +2168,8 @@ function applyFilter(type) {
 
 function renderTypeTabs() {
   if (!activeExam) return;
-  const types = ['all','single','multiple','tf','short','essay'];
-  const labels = {all:'全部',single:'单选',multiple:'多选',tf:'判断',short:'简答',essay:'论述'};
+  const types = ['all','single','multiple','tf'];
+  const labels = {all:'全部',single:'单选',multiple:'多选',tf:'判断'};
   const counts = {};
   types.forEach(t => { counts[t] = t === 'all' ? activeExam.questions.length : activeExam.questions.filter(q => q.type === t).length; });
   const tabsEl = document.getElementById('typeTabs');
@@ -2089,11 +2219,16 @@ function renderExam() {
 // -- Single --
 function renderSingle(area, q, oi, sub) {
   const L = ['A','B','C','D'];
+  const mMode = memorizeMode;
   area.innerHTML = `<div class="options">${(q.options||[]).map((o,i) => {
     let c = 'opt';
-    if (sub) { c += ' disabled'; if (i === q.correctIndex) c += ' correct'; if (activeExam.userAnswers[oi] === i && i !== q.correctIndex) c += ' wrong'; }
-    return `<div class="${c}" onclick="clickSingle(${i})"><div class="ic-radio"></div><span>${L[i]}. ${escH(o)}</span></div>`;
-  }).join('')}</div>${sub ? expBox(q) : ''}`;
+    if (mMode) {
+      c += ' disabled'; if (i === q.correctIndex) c += ' correct';
+    } else if (sub) {
+      c += ' disabled'; if (i === q.correctIndex) c += ' correct'; if (activeExam.userAnswers[oi] === i && i !== q.correctIndex) c += ' wrong';
+    }
+    return `<div class="${c}" onclick="${mMode?'':"clickSingle("+i+")"}"><div class="ic-radio"></div><span>${L[i]}. ${escH(o)}</span></div>`;
+  }).join('')}</div>${(mMode || sub) ? expBox(q) : ''}`;
 }
 
 function clickSingle(i) {
@@ -2117,23 +2252,43 @@ function toggleAutoAdvance() {
   toast(autoAdvance ? '自动跳转：开' : '自动跳转：关');
 }
 
+function toggleMemorizeMode() {
+  memorizeMode = !memorizeMode;
+  const el = document.getElementById('memorizeToggle');
+  if (el) el.classList.toggle('on', memorizeMode);
+  // Update label text
+  const toggleWrap = el ? el.parentElement : null;
+  if (toggleWrap) {
+    toggleWrap.querySelector('span').textContent = memorizeMode ? '🧠 背题' : '✏️ 刷题';
+  }
+  toast(memorizeMode ? '背题模式：直接显示答案' : '刷题模式：交互答题');
+  // Re-render current view
+  if (activeExam) renderExam();
+  if (typeof reciteExamId !== 'undefined' && reciteExamId) renderReciteCard();
+}
+
 // -- Multiple --
 function renderMulti(area, q, oi, sub) {
   const L = ['A','B','C','D','E','F','G'];
+  const mMode = memorizeMode;
+  const cs = new Set(q.correctIndexes||[]);
   const ua = activeExam.userAnswers[oi] || [];
   const allSelected = (q.options||[]).every((_, i) => ua.includes(i));
-  area.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+  area.innerHTML = `${!mMode ? `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
     <span style="font-size:11px;color:var(--t3);">多选，请选择所有正确答案后确认</span>
     ${!sub ? `<button class="btn btn-s btn-xs" onclick="selectAll(${oi})" style="font-size:11px;">${allSelected ? '取消全选' : '全选'}</button>` : ''}
-  </div>
+  </div>` : ''}
   <div class="options">${(q.options||[]).map((o,i) => {
     let c = 'opt';
-    if (sub) { c += ' disabled'; const cs = new Set(q.correctIndexes||[]);
-      if (cs.has(i) && ua.includes(i)) c += ' correct'; if (!cs.has(i) && ua.includes(i)) c += ' wrong'; if (cs.has(i) && !ua.includes(i)) c += ' correct'; }
-    else if (ua.includes(i)) c += ' sel';
-    return `<div class="${c}" onclick="${sub?'':"togM("+i+")"}"><div class="ic-check">${ua.includes(i)?'✓':''}</div><span>${L[i]}. ${escH(o)}</span></div>`;
+    if (mMode) {
+      c += ' disabled'; if (cs.has(i)) c += ' correct';
+    } else if (sub) {
+      c += ' disabled';
+      if (cs.has(i) && ua.includes(i)) c += ' correct'; if (!cs.has(i) && ua.includes(i)) c += ' wrong'; if (cs.has(i) && !ua.includes(i)) c += ' correct';
+    } else if (ua.includes(i)) c += ' sel';
+    return `<div class="${c}" onclick="${(mMode||sub)?'':"togM("+i+")"}"><div class="ic-check">${(mMode?cs.has(i):ua.includes(i))?'✓':''}</div><span>${L[i]}. ${escH(o)}</span></div>`;
   }).join('')}</div>
-  ${!sub ? `<button class="btn btn-p btn-sm" onclick="subM(${oi})" ${ua.length===0?'disabled':''}>确认答案</button>` : ''}${sub ? expBox(q) : ''}`;
+  ${!mMode && !sub ? `<button class="btn btn-p btn-sm" onclick="subM(${oi})" ${ua.length===0?'disabled':''}>确认答案</button>` : ''}${(mMode || sub) ? expBox(q) : ''}`;
 }
 
 function selectAll(oi) {
@@ -2153,37 +2308,52 @@ function subM(oi) { const q = activeExam.questions[oi]; const ua = activeExam.us
 
 // -- Short --
 function renderShort(area, q, oi, sub) {
-  const ua = activeExam.userAnswers[oi] || '';
-  area.innerHTML = `<textarea class="ans-input" id="shortTA" placeholder="输入答案……" ${sub?'disabled':''}>${escH(ua)}</textarea>
-  ${!sub ? `<button class="btn btn-p btn-sm" id="shortSub" style="margin-top:8px;" onclick="subShort(${oi})" ${ua.trim()?'':'disabled'}>提交答案</button>` : ''}
-  ${sub ? `<div class="exp-box show"><div class="exp-label">参考答案</div>${escH(q.referenceAnswer||q.explanation||'').replace(/\n/g,'<br>')}</div>` : ''}
-  ${sub ? `<div class="eval-row"><button class="btn btn-s btn-sm" onclick="selfEval(${oi},true)" style="${activeExam.isCorrect[oi]===true?'border-color:var(--green);color:var(--green);':''}">✓ 正确</button><button class="btn btn-s btn-sm" onclick="selfEval(${oi},false)" style="${activeExam.isCorrect[oi]===false?'border-color:var(--red);color:var(--red);':''}">✗ 有误</button></div>` : ''}
-  ${sub && activeExam.isCorrect[oi] !== undefined ? `<div class="tag-row" style="color:${activeExam.isCorrect[oi]?'var(--green)':'var(--red)'};">${activeExam.isCorrect[oi]?'✓ 正确':'✗ 错误'}</div>` : ''}`;
-  if (!sub) { const t = document.getElementById('shortTA'); if (t) t.addEventListener('input', function() { activeExam.userAnswers[oi] = this.value; const b = document.getElementById('shortSub'); if (b) b.disabled = this.value.trim().length === 0; }); }
+  const mMode = memorizeMode;
+  if (mMode) {
+    area.innerHTML = `<div class="exp-box show"><div class="exp-label">📝 参考答案</div>${escH(q.referenceAnswer||q.explanation||'').replace(/\n/g,'<br>')}</div>${expBox(q)}`;
+  } else {
+    const ua = activeExam.userAnswers[oi] || '';
+    area.innerHTML = `<textarea class="ans-input" id="shortTA" placeholder="输入答案……" ${sub?'disabled':''}>${escH(ua)}</textarea>
+    ${!sub ? `<button class="btn btn-p btn-sm" id="shortSub" style="margin-top:8px;" onclick="subShort(${oi})" ${ua.trim()?'':'disabled'}>提交答案</button>` : ''}
+    ${sub ? `<div class="exp-box show"><div class="exp-label">参考答案</div>${escH(q.referenceAnswer||q.explanation||'').replace(/\n/g,'<br>')}</div>` : ''}
+    ${sub ? `<div class="eval-row"><button class="btn btn-s btn-sm" onclick="selfEval(${oi},true)" style="${activeExam.isCorrect[oi]===true?'border-color:var(--green);color:var(--green);':''}">✓ 正确</button><button class="btn btn-s btn-sm" onclick="selfEval(${oi},false)" style="${activeExam.isCorrect[oi]===false?'border-color:var(--red);color:var(--red);':''}">✗ 有误</button></div>` : ''}
+    ${sub && activeExam.isCorrect[oi] !== undefined ? `<div class="tag-row" style="color:${activeExam.isCorrect[oi]?'var(--green)':'var(--red)'};">${activeExam.isCorrect[oi]?'✓ 正确':'✗ 错误'}</div>` : ''}`;
+    if (!sub) { const t = document.getElementById('shortTA'); if (t) t.addEventListener('input', function() { activeExam.userAnswers[oi] = this.value; const b = document.getElementById('shortSub'); if (b) b.disabled = this.value.trim().length === 0; }); }
+  }
 }
 function subShort(oi) { activeExam.isSubmitted[oi] = true; renderExam(); updateProgress(); checkFinish(); }
 function selfEval(oi, c) { activeExam.isCorrect[oi] = c; recordAnswer(c); renderExam(); updateProgress(); checkFinish(); saveExam(activeExam.name); }
 
 // -- Essay --
 function renderEssay(area, q, oi, sub) {
-  const ua = activeExam.userAnswers[oi] || '';
-  area.innerHTML = `<textarea class="ans-input" id="essayTA" style="min-height:120px;" placeholder="输入论述……" ${sub?'disabled':''}>${escH(ua)}</textarea>
-  ${!sub ? `<button class="btn btn-p btn-sm" id="essaySub" style="margin-top:8px;" onclick="subEssay(${oi})" ${ua.trim()?'':'disabled'}>提交答案</button>` : ''}
-  ${sub ? `<div class="exp-box show"><div class="exp-label">参考要点</div>${escH(q.referenceAnswer||q.explanation||'').replace(/\n/g,'<br>')}</div>` : ''}
-  ${sub ? `<div class="eval-row"><button class="btn btn-s btn-sm" onclick="selfEval(${oi},true)" style="${activeExam.isCorrect[oi]===true?'border-color:var(--green);color:var(--green);':''}">✓ 正确</button><button class="btn btn-s btn-sm" onclick="selfEval(${oi},false)" style="${activeExam.isCorrect[oi]===false?'border-color:var(--red);color:var(--red);':''}">✗ 需要改进</button></div>` : ''}
-  ${sub && activeExam.isCorrect[oi] !== undefined ? `<div class="tag-row" style="color:${activeExam.isCorrect[oi]?'var(--green)':'var(--red)'};">${activeExam.isCorrect[oi]?'✓ 正确':'✗ 错误'}</div>` : ''}`;
-  if (!sub) { const t = document.getElementById('essayTA'); if (t) t.addEventListener('input', function() { activeExam.userAnswers[oi] = this.value; const b = document.getElementById('essaySub'); if (b) b.disabled = this.value.trim().length === 0; }); }
+  const mMode = memorizeMode;
+  if (mMode) {
+    area.innerHTML = `<div class="exp-box show"><div class="exp-label">📝 参考要点</div>${escH(q.referenceAnswer||q.explanation||'').replace(/\n/g,'<br>')}</div>${expBox(q)}`;
+  } else {
+    const ua = activeExam.userAnswers[oi] || '';
+    area.innerHTML = `<textarea class="ans-input" id="essayTA" style="min-height:120px;" placeholder="输入论述……" ${sub?'disabled':''}>${escH(ua)}</textarea>
+    ${!sub ? `<button class="btn btn-p btn-sm" id="essaySub" style="margin-top:8px;" onclick="subEssay(${oi})" ${ua.trim()?'':'disabled'}>提交答案</button>` : ''}
+    ${sub ? `<div class="exp-box show"><div class="exp-label">参考要点</div>${escH(q.referenceAnswer||q.explanation||'').replace(/\n/g,'<br>')}</div>` : ''}
+    ${sub ? `<div class="eval-row"><button class="btn btn-s btn-sm" onclick="selfEval(${oi},true)" style="${activeExam.isCorrect[oi]===true?'border-color:var(--green);color:var(--green);':''}">✓ 正确</button><button class="btn btn-s btn-sm" onclick="selfEval(${oi},false)" style="${activeExam.isCorrect[oi]===false?'border-color:var(--red);color:var(--red);':''}">✗ 需要改进</button></div>` : ''}
+    ${sub && activeExam.isCorrect[oi] !== undefined ? `<div class="tag-row" style="color:${activeExam.isCorrect[oi]?'var(--green)':'var(--red)'};">${activeExam.isCorrect[oi]?'✓ 正确':'✗ 错误'}</div>` : ''}`;
+    if (!sub) { const t = document.getElementById('essayTA'); if (t) t.addEventListener('input', function() { activeExam.userAnswers[oi] = this.value; const b = document.getElementById('essaySub'); if (b) b.disabled = this.value.trim().length === 0; }); }
+  }
 }
 function subEssay(oi) { activeExam.isSubmitted[oi] = true; renderExam(); updateProgress(); checkFinish(); }
 
 // -- True/False --
 function renderTf(area, q, oi, sub) {
   const labels = ['正确', '错误'];
+  const mMode = memorizeMode;
   area.innerHTML = `<div class="options">${labels.map((lbl, i) => {
     let c = 'opt';
-    if (sub) { c += ' disabled'; if (i === q.correctIndex) c += ' correct'; if (activeExam.userAnswers[oi] === i && i !== q.correctIndex) c += ' wrong'; }
-    return `<div class="${c}" onclick="clickTf(${i})"><div class="ic-radio"></div><span>${lbl}</span></div>`;
-  }).join('')}</div>${sub ? expBox(q) : ''}`;
+    if (mMode) {
+      c += ' disabled'; if (i === q.correctIndex) c += ' correct';
+    } else if (sub) {
+      c += ' disabled'; if (i === q.correctIndex) c += ' correct'; if (activeExam.userAnswers[oi] === i && i !== q.correctIndex) c += ' wrong';
+    }
+    return `<div class="${c}" onclick="${mMode?'':"clickTf("+i+")"}"><div class="ic-radio"></div><span>${lbl}</span></div>`;
+  }).join('')}</div>${(mMode || sub) ? expBox(q) : ''}`;
 }
 
 function clickTf(i) {
@@ -3512,6 +3682,252 @@ function refreshMindMap() {
   if (!e || !e.outline) return;
   const mastery = calcNodeMastery(e.outline, e.questions, e.isSubmitted || {}, e.isCorrect || {});
   buildMindMap(e.outline, mastery);
+}
+
+// ==================== RECITE ====================
+
+// Recite import toggle
+function toggleReciteImport() {
+  const body = document.getElementById('reciteImportBody');
+  const arrow = document.getElementById('reciteImportArrow');
+  if (body.style.display === 'none') {
+    body.style.display = 'block';
+    arrow.textContent = '▼';
+  } else {
+    body.style.display = 'none';
+    arrow.textContent = '▶';
+  }
+}
+
+// Recite file upload
+function handleReciteFile(input) {
+  const f = input.files[0];
+  if (f) {
+    // Reuse existing processFileGetText but for recite
+    processReciteFileGetText(f).then(text => {
+      document.getElementById('reciteMaterialInput').value = text;
+      const badge = document.getElementById('reciteFileBadge');
+      badge.style.display = 'inline-flex';
+      badge.className = 'file-badge';
+      badge.textContent = '📄 ' + f.name;
+    }).catch(err => {
+      toast('文件解析失败：' + err.message, 'err');
+    });
+  }
+}
+
+async function processReciteFileGetText(file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (ext === 'txt' || ext === 'md' || ext === 'csv') {
+    return new Promise((resolve) => {
+      const r = new FileReader();
+      r.onload = e => resolve(e.target.result);
+      r.readAsText(file, 'UTF-8');
+    });
+  }
+  if (ext === 'docx') {
+    if (!mammothLoaded) {
+      if (mammothLoading) throw new Error('解析器加载中，请稍后');
+      mammothLoading = true;
+      let ok = false;
+      for (const url of MAMMOTH_CDNS) { try { await loadScript(url); ok = true; break; } catch {} }
+      mammothLoading = false;
+      if (!ok) throw new Error('DOCX 解析器加载失败');
+      mammothLoaded = true;
+    }
+    const buf = await file.arrayBuffer();
+    const result = await mammoth.extractRawText({ arrayBuffer: buf });
+    return result.value.trim();
+  }
+  if (ext === 'pdf') {
+    if (!pdfjsLoaded) {
+      if (pdfjsLoading) throw new Error('解析器加载中，请稍后');
+      pdfjsLoading = true;
+      let ok = false;
+      for (const url of PDFJS_CDNS) { try { await loadScript(url); ok = true; break; } catch {} }
+      if (!ok) { pdfjsLoading = false; throw new Error('PDF 解析器加载失败'); }
+      for (const url of PDFJS_WORKER_CDNS) { try { pdfjsLib.GlobalWorkerOptions.workerSrc = url; break; } catch {} }
+      pdfjsLoading = false;
+      pdfjsLoaded = true;
+    }
+    const buf = await file.arrayBuffer();
+    const loadingTask = pdfjsLib.getDocument({ data: buf });
+    const pdf = await loadingTask.promise;
+    let fullText = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      fullText += content.items.map(item => item.str).join(' ') + '\n';
+    }
+    return fullText.trim();
+  }
+  throw new Error('不支持 .' + ext + ' 格式');
+}
+
+// Generate recite-only exam (only short + essay)
+async function generateReciteExam() {
+  const material = document.getElementById('reciteMaterialInput').value.trim();
+  if (!material) { toast('请先粘贴或上传背诵资料', 'err'); return; }
+  if (material.length < 30) { toast('资料太短（至少30字）', 'err'); return; }
+  if (!apiKey) { toast('请先设置 DeepSeek API Key', 'err'); openSettings(); return; }
+  if (!apiKey.startsWith('sk-')) { toast('API Key 格式不正确，应以 sk- 开头', 'err'); return; }
+
+  const btn = document.getElementById('reciteGenBtn'), status = document.getElementById('reciteGenStatus');
+  btn.disabled = true; btn.textContent = 'AI 生成中……';
+  status.innerHTML = '<div class="loading"><div class="spinner"></div>连接 DeepSeek……</div>';
+
+  try {
+    let allQuestions = [];
+
+    if (material.length > 8000) {
+      const chunks = splitIntoChunks(material, 5000);
+      status.innerHTML = '<div class="loading"><div class="spinner"></div>资料较长，分 ' + chunks.length + ' 段处理……</div>';
+      for (let ci = 0; ci < chunks.length; ci++) {
+        status.innerHTML = '<div class="loading"><div class="spinner"></div>AI 正在生成背诵题目：第 ' + (ci+1) + '/' + chunks.length + ' 段……</div>';
+        const result = await callAI(chunks[ci], '请根据以下学习资料生成简答题和论述题，用于背诵记忆。覆盖本段所有重要知识点：\n\n' + chunks[ci], { includeOutline: false, includeBigQuestions: true, reciteOnly: true });
+        allQuestions = allQuestions.concat(result.questions);
+      }
+    } else {
+      status.innerHTML = '<div class="loading"><div class="spinner"></div>AI 正在分析资料并生成背诵题目（简答+论述）……</div>';
+      const result = await callAI(material, '请根据以下学习资料生成简答题和论述题，用于背诵记忆。覆盖资料中所有重要知识点：\n\n' + material, { includeOutline: false, includeBigQuestions: true, reciteOnly: true });
+      allQuestions = result.questions;
+    }
+
+    if (allQuestions.length === 0) throw new Error('未生成有效题目');
+
+    const questions = allQuestions.map((q, i) => ({
+      id: i, type: q.type || 'short', question: q.question || '', options: q.options || [],
+      correctIndex: q.correctIndex, correctIndexes: q.correctIndexes || [],
+      referenceAnswer: q.referenceAnswer || '', explanation: q.explanation || '',
+      outlineNodeId: q.outlineNodeId || '',
+    }));
+
+    const now = new Date();
+    const name = '背诵 · ' + now.getFullYear()+'/'+(now.getMonth()+1)+'/'+now.getDate()+' '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+
+    activeExam = { id: 'ex_' + Date.now(), name, createdAt: now.toISOString(), questions, outline: null, userAnswers: {}, isSubmitted: {}, isCorrect: {}, cutWrong: {}, currentFilter: 'all', currentIndex: 0, reviewMode: null };
+    saveExam(name);
+    renderReciteList();
+    // Clear input
+    document.getElementById('reciteMaterialInput').value = '';
+    document.getElementById('reciteFileBadge').style.display = 'none';
+    status.innerHTML = '<div class="msg ok">已生成 ' + questions.length + ' 道背诵题目，自动保存</div>';
+    toast('生成 ' + questions.length + ' 道背诵题', 'ok');
+
+  } catch (err) {
+    let msg = err.message;
+    if (msg === 'TIMEOUT') msg = '请求超时。请检查：\n1. 网络能否访问 api.deepseek.com\n2. 是否需要开代理/VPN\n3. 资料是否过长';
+    if (err.name === 'TypeError' && msg.includes('fetch')) msg = '网络连接失败。请检查网络或尝试开代理';
+    status.innerHTML = '<div class="msg err">' + escH(msg).replace(/\n/g, '<br>') + '</div>';
+    toast('生成失败', 'err');
+  }
+  btn.disabled = false; btn.textContent = '📖 生成背诵题目（仅简答+论述）';
+}
+
+function renderReciteList() {
+  const grid = document.getElementById('reciteGrid');
+  const empty = document.getElementById('reciteEmpty');
+  const countEl = document.getElementById('reciteCount');
+  // Find exams that have short/essay questions
+  const examsWithBigQ = library.filter(e => e.questions.some(q => q.type === 'short' || q.type === 'essay'));
+  if (examsWithBigQ.length === 0) {
+    grid.innerHTML = '';
+    empty.style.display = 'block';
+    if (countEl) countEl.textContent = '';
+    return;
+  }
+  empty.style.display = 'none';
+  if (countEl) countEl.textContent = examsWithBigQ.length + ' 份资料';
+  grid.innerHTML = examsWithBigQ.map(e => {
+    const d = new Date(e.createdAt);
+    const ds = d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate();
+    const bigCount = e.questions.filter(q => q.type === 'short' || q.type === 'essay').length;
+    const shortCount = e.questions.filter(q => q.type === 'short').length;
+    const essayCount = e.questions.filter(q => q.type === 'essay').length;
+    let typeStr = [];
+    if (shortCount > 0) typeStr.push(shortCount + ' 简答');
+    if (essayCount > 0) typeStr.push(essayCount + ' 论述');
+    return `<div class="lib-item">
+      <div class="lib-info" onclick="openReciteExam('${e.id}')" style="cursor:pointer;">
+        <div class="lib-name">${escH(e.name)}</div>
+        <div class="lib-meta">${ds} · ${bigCount}道大题 · ${typeStr.join('、')}</div>
+      </div>
+      <div class="lib-actions">
+        <button class="btn btn-s btn-xs" onclick="event.stopPropagation();openReciteExam('${e.id}','memorize')" title="背题模式">🧠</button>
+        <button class="btn btn-s btn-xs" onclick="event.stopPropagation();openReciteExam('${e.id}','quiz')" title="刷题模式">✏️</button>
+      </div></div>`;
+  }).join('');
+}
+
+function openReciteExam(id, mode) {
+  const e = library.find(x => x.id === id);
+  if (!e) return;
+  reciteExamId = id;
+  reciteQuestions = e.questions.filter(q => q.type === 'short' || q.type === 'essay');
+  reciteIndex = 0;
+  // If mode specified, set memorizeMode accordingly
+  if (mode === 'memorize') memorizeMode = true;
+  else if (mode === 'quiz') memorizeMode = false;
+  document.getElementById('reciteListView').style.display = 'none';
+  document.getElementById('reciteCardView').style.display = 'block';
+  renderReciteCard();
+}
+
+function closeReciteCard() {
+  document.getElementById('reciteListView').style.display = 'block';
+  document.getElementById('reciteCardView').style.display = 'none';
+  reciteExamId = null;
+  reciteQuestions = [];
+  renderReciteList();
+}
+
+function renderReciteCard() {
+  if (!reciteQuestions.length) {
+    document.getElementById('reciteCardView').innerHTML = '<div class="empty-state">该试卷暂无大题</div>';
+    return;
+  }
+  const q = reciteQuestions[reciteIndex];
+  const total = reciteQuestions.length;
+  const typeLabel = q.type === 'short' ? '简答题' : '论述题';
+  const typeClass = q.type === 'short' ? 'tag-h' : 'tag-e';
+  const answer = q.referenceAnswer || q.explanation || '暂无参考答案';
+  const showAnswer = memorizeMode;
+
+  document.getElementById('reciteCardView').innerHTML = `
+    <div class="recite-card-header">
+      <button class="btn btn-s btn-sm" onclick="closeReciteCard()">← 返回</button>
+      <span class="rc-idx">${reciteIndex + 1} / ${total}</span>
+      <div class="toggle-wrap" onclick="toggleMemorizeMode()">
+        <span>${memorizeMode ? '🧠 背题' : '✏️ 刷题'}</span>
+        <div class="toggle-switch${memorizeMode ? ' on' : ''}" id="memorizeToggle2"></div>
+      </div>
+    </div>
+    <div class="type-tag ${typeClass}" style="margin-bottom:10px;">${typeLabel}</div>
+    <div class="recite-card ${showAnswer ? 'show-answer' : ''}" id="reciteCardEl" onclick="${showAnswer ? '' : 'flipReciteCard()'}">
+      <div class="rc-question">${escH(q.question)}</div>
+      <div class="rc-answer">
+        <div class="rc-answer-label">📝 参考答案</div>
+        ${escH(answer).replace(/\n/g, '<br>')}
+      </div>
+      ${!showAnswer ? '<div class="rc-tap-hint">👆 点击翻转查看答案</div>' : ''}
+    </div>
+    ${q.explanation ? `<div class="exp-box show" style="margin-top:8px;"><div class="exp-label">💡 解析</div>${escH(q.explanation).replace(/\n/g, '<br>')}</div>` : ''}
+    <div class="recite-nav">
+      <button class="btn btn-s" onclick="prevReciteCard()" ${reciteIndex === 0 ? 'disabled' : ''}>← 上一张</button>
+      <button class="btn btn-s" onclick="nextReciteCard()" ${reciteIndex >= total - 1 ? 'disabled' : ''}>下一张 →</button>
+    </div>`;
+}
+
+function flipReciteCard() {
+  const el = document.getElementById('reciteCardEl');
+  if (el) el.classList.add('show-answer');
+}
+
+function prevReciteCard() {
+  if (reciteIndex > 0) { reciteIndex--; renderReciteCard(); }
+}
+function nextReciteCard() {
+  if (reciteIndex < reciteQuestions.length - 1) { reciteIndex++; renderReciteCard(); }
 }
 
 // ==================== INIT ====================
