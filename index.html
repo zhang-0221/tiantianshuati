@@ -722,6 +722,9 @@ textarea::placeholder{color:var(--t3)}
       <button class="sidebar-item" id="navRecite" onclick="switchTab('recite')">
         <span class="si-icon">📖</span>背诵宝地
       </button>
+      <button class="sidebar-item" id="navVocab" onclick="switchTab('vocab')">
+        <span class="si-icon">📝</span>情景单词
+      </button>
       <button class="sidebar-item" id="navMind" onclick="switchTab('mindmap')">
         <span class="si-icon">🧠</span>思维导图
       </button>
@@ -815,6 +818,36 @@ textarea::placeholder{color:var(--t3)}
         <div class="empty-state" id="reciteEmpty">还没有背诵卡片，在上方导入资料即可生成</div>
       </div>
       <div id="reciteCardView" style="display:none;"></div>
+    </div>
+
+    <!-- Tab: 情景单词 -->
+    <div class="tab-content" id="tabVocab">
+      <div class="card">
+        <div class="card-hd">📝 情景单词 <span class="card-tag">AI 用你输入的单词生成情景短文</span></div>
+        <div style="margin-bottom:8px;font-size:12px;color:var(--t3);">输入今天要巩固的单词，用逗号或空格分隔</div>
+        <textarea id="vocabInput" placeholder="例如：apple, banana, delicious, breakfast, healthy&#10;或者：苹果 香蕉 美味 早餐 健康"></textarea>
+        <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;align-items:center;">
+          <button class="btn btn-p" id="vocabGenBtn" onclick="generateVocabStory()">✨ 生成情景短文</button>
+          <label style="font-size:12px;color:var(--t2);display:flex;align-items:center;gap:6px;cursor:pointer;">
+            <input type="checkbox" id="vocabTranslateToggle" checked style="accent-color:var(--accent);"> 同时生成中文翻译
+          </label>
+        </div>
+        <div id="vocabStatus"></div>
+      </div>
+      <div class="card" id="vocabResultCard" style="display:none;">
+        <div class="card-hd" style="justify-content:flex-start;gap:8px;">
+          📖 情景短文
+          <button class="btn btn-s btn-xs" id="vocabShowTransBtn" onclick="toggleVocabTranslation()" style="margin-left:auto;">🌐 显示翻译</button>
+        </div>
+        <div id="vocabStoryText" style="font-size:16px;line-height:2.1;white-space:pre-wrap;"></div>
+        <div id="vocabTransText" style="display:none;margin-top:14px;padding-top:14px;border-top:1px dashed var(--border);font-size:15px;line-height:2.1;color:var(--t2);white-space:pre-wrap;"></div>
+        <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:6px;align-items:center;" id="vocabWordTags"></div>
+      </div>
+      <div style="margin-top:16px;">
+        <div class="card-hd" style="margin-bottom:8px;">📋 历史记录</div>
+        <div class="lib-list" id="vocabHistory"></div>
+        <div class="empty-state" id="vocabHistoryEmpty">还没有生成过情景短文</div>
+      </div>
     </div>
 
     <!-- Tab: 思维导图 -->
@@ -1017,6 +1050,12 @@ let reciteExamId = null;
 let reciteQuestions = [];
 let reciteIndex = 0;
 
+// Vocab state
+let vocabHistory = [];
+const LS_VOCAB = 'ttsk_vocab_history';
+let currentVocabWords = [];
+let currentVocabTranslation = '';
+
 // ==================== TOAST ====================
 function toast(msg, type) {
   const wrap = document.getElementById('toastWrap');
@@ -1038,12 +1077,15 @@ function switchTab(tab) {
   document.getElementById('tabImport').classList.toggle('active', tab === 'import');
   document.getElementById('tabLibrary').classList.toggle('active', tab === 'library');
   document.getElementById('tabRecite').classList.toggle('active', tab === 'recite');
+  document.getElementById('tabVocab').classList.toggle('active', tab === 'vocab');
   document.getElementById('tabMindmap').classList.toggle('active', tab === 'mindmap');
   document.getElementById('navImport').classList.toggle('active', tab === 'import');
   document.getElementById('navLib').classList.toggle('active', tab === 'library');
   document.getElementById('navRecite').classList.toggle('active', tab === 'recite');
+  document.getElementById('navVocab').classList.toggle('active', tab === 'vocab');
   document.getElementById('navMind').classList.toggle('active', tab === 'mindmap');
   if (tab === 'recite') renderReciteList();
+  if (tab === 'vocab') renderVocabHistory();
   if (tab === 'mindmap') renderMindList();
   // Exit merge mode when leaving library tab
   if (tab !== 'library' && mergeMode) {
@@ -3928,6 +3970,193 @@ function prevReciteCard() {
 }
 function nextReciteCard() {
   if (reciteIndex < reciteQuestions.length - 1) { reciteIndex++; renderReciteCard(); }
+}
+
+// ==================== VOCAB ====================
+function loadVocabHistory() {
+  try { vocabHistory = JSON.parse(localStorage.getItem(LS_VOCAB) || '[]'); } catch { vocabHistory = []; }
+}
+loadVocabHistory();
+function saveVocabHistory() { localStorage.setItem(LS_VOCAB, JSON.stringify(vocabHistory)); }
+
+async function generateVocabStory() {
+  const raw = document.getElementById('vocabInput').value.trim();
+  if (!raw) { toast('请先输入要巩固的单词', 'err'); return; }
+  if (!apiKey) { toast('请先设置 DeepSeek API Key', 'err'); openSettings(); return; }
+  if (!apiKey.startsWith('sk-')) { toast('API Key 格式不正确', 'err'); return; }
+
+  // Parse words (split by comma, semicolon, Chinese comma, or whitespace)
+  const words = raw.split(/[,;，；\s]+/).filter(w => w.length > 0);
+  if (words.length < 2) { toast('至少输入2个单词', 'err'); return; }
+  if (words.length > 30) { toast('最多30个单词，请精简', 'err'); return; }
+  currentVocabWords = words;
+
+  const translate = document.getElementById('vocabTranslateToggle').checked;
+  const btn = document.getElementById('vocabGenBtn'), status = document.getElementById('vocabStatus');
+  btn.disabled = true; btn.textContent = 'AI 创作中……';
+  status.innerHTML = '<div class="loading"><div class="spinner"></div>正在用这些单词创作情景短文……</div>';
+
+  const wordList = words.join(', ');
+  const prompt = `请用以下单词创作一篇自然流畅的英语情景短文。要求：
+- 短文长度：${Math.max(80, words.length * 20)}-${Math.max(150, words.length * 30)}个英文单词
+- 必须包含所有单词（${wordList}），短文中的这些单词用 **单词** 标记
+- 短文要有真实的生活场景，让读者在语境中自然记住单词
+- 语言地道自然，不要生硬堆砌单词
+- 难度适合英语学习者
+${translate ? '- 最后请用 ===TRANSLATION=== 分隔，后面附上中文翻译' : ''}
+
+请直接输出短文，不要加任何前言或解释。`;
+
+  try {
+    const resp = await fetchTimeout('https://api.deepseek.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [
+          { role: 'system', content: '你是一个英语教学专家，擅长创作包含指定词汇的情景短文，帮助学生在真实语境中记忆单词。' },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.8,
+        max_tokens: 4096
+      })
+    }, 120000);
+
+    if (!resp.ok) {
+      const errMap = {401:'API Key 无效',402:'余额不足',429:'请求太频繁，稍后重试'};
+      throw new Error(errMap[resp.status] || 'API 错误 ' + resp.status);
+    }
+
+    const data = await resp.json();
+    let content = data.choices?.[0]?.message?.content || '';
+    if (!content.trim()) throw new Error('AI 返回为空');
+
+    // Split translation if present
+    let story = content, translation = '';
+    const transIdx = content.indexOf('===TRANSLATION===');
+    if (transIdx >= 0) {
+      story = content.substring(0, transIdx).trim();
+      translation = content.substring(transIdx + '===TRANSLATION==='.length).trim();
+    }
+    currentVocabTranslation = translation;
+
+    // Render result
+    const resultCard = document.getElementById('vocabResultCard');
+    resultCard.style.display = 'block';
+
+    // Highlight words in story
+    const wordSet = new Set(words.map(w => w.toLowerCase()));
+    const highlighted = escH(story).replace(/\*\*(.+?)\*\*/g, '<mark style="background:var(--amber-l);padding:2px 5px;border-radius:3px;font-weight:700;">$1</mark>');
+    document.getElementById('vocabStoryText').innerHTML = highlighted;
+
+    // Translation
+    const transDiv = document.getElementById('vocabTransText');
+    if (translation) {
+      transDiv.textContent = translation;
+      transDiv.style.display = 'none';
+      document.getElementById('vocabShowTransBtn').style.display = '';
+      document.getElementById('vocabShowTransBtn').textContent = '🌐 显示翻译';
+    } else {
+      transDiv.textContent = '';
+      transDiv.style.display = 'none';
+      document.getElementById('vocabShowTransBtn').style.display = 'none';
+    }
+
+    // Word tags
+    document.getElementById('vocabWordTags').innerHTML = words.map(w =>
+      `<span style="display:inline-block;padding:4px 10px;background:var(--accent-l);color:var(--accent);border-radius:12px;font-size:12px;font-weight:600;">${escH(w)}</span>`
+    ).join('');
+
+    // Save to history
+    vocabHistory.unshift({
+      words, story, translation,
+      createdAt: new Date().toISOString()
+    });
+    if (vocabHistory.length > 20) vocabHistory = vocabHistory.slice(0, 20);
+    saveVocabHistory();
+    renderVocabHistory();
+
+    status.innerHTML = '<div class="msg ok">短文已生成 ✓</div>';
+    toast('情景短文已生成', 'ok');
+    document.getElementById('vocabInput').value = '';
+
+  } catch (err) {
+    let msg = err.message;
+    if (msg === 'TIMEOUT') msg = '请求超时，请检查网络';
+    status.innerHTML = '<div class="msg err">' + escH(msg) + '</div>';
+    toast('生成失败', 'err');
+  }
+  btn.disabled = false; btn.textContent = '✨ 生成情景短文';
+}
+
+function toggleVocabTranslation() {
+  const transDiv = document.getElementById('vocabTransText');
+  const btn = document.getElementById('vocabShowTransBtn');
+  if (transDiv.style.display === 'none') {
+    transDiv.style.display = 'block';
+    btn.textContent = '🙈 隐藏翻译';
+  } else {
+    transDiv.style.display = 'none';
+    btn.textContent = '🌐 显示翻译';
+  }
+}
+
+function renderVocabHistory() {
+  const grid = document.getElementById('vocabHistory');
+  const empty = document.getElementById('vocabHistoryEmpty');
+  if (!grid) return;
+  if (vocabHistory.length === 0) {
+    grid.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  grid.innerHTML = vocabHistory.map((h, idx) => {
+    const d = new Date(h.createdAt);
+    const ds = d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+    const preview = h.story.substring(0, 60) + '...';
+    return `<div class="lib-item" onclick="showVocabHistoryItem(${idx})" style="cursor:pointer;">
+      <div class="lib-info">
+        <div class="lib-name">${escH(h.words.join(', '))}</div>
+        <div class="lib-meta">${ds} · ${h.words.length}个单词 · ${preview}</div>
+      </div>
+      <button class="lib-del" onclick="event.stopPropagation();deleteVocabHistory(${idx})">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function showVocabHistoryItem(idx) {
+  const h = vocabHistory[idx];
+  if (!h) return;
+  currentVocabWords = h.words;
+  currentVocabTranslation = h.translation || '';
+  document.getElementById('vocabResultCard').style.display = 'block';
+  // Highlight
+  const wordSet = new Set(h.words.map(w => w.toLowerCase()));
+  const highlighted = escH(h.story).replace(/\*\*(.+?)\*\*/g, '<mark style="background:var(--amber-l);padding:2px 5px;border-radius:3px;font-weight:700;">$1</mark>');
+  document.getElementById('vocabStoryText').innerHTML = highlighted || escH(h.story);
+  document.getElementById('vocabWordTags').innerHTML = h.words.map(w =>
+    `<span style="display:inline-block;padding:4px 10px;background:var(--accent-l);color:var(--accent);border-radius:12px;font-size:12px;font-weight:600;">${escH(w)}</span>`
+  ).join('');
+  const transDiv = document.getElementById('vocabTransText');
+  if (h.translation) {
+    transDiv.textContent = h.translation;
+    transDiv.style.display = 'none';
+    document.getElementById('vocabShowTransBtn').style.display = '';
+    document.getElementById('vocabShowTransBtn').textContent = '🌐 显示翻译';
+  } else {
+    transDiv.textContent = '';
+    transDiv.style.display = 'none';
+    document.getElementById('vocabShowTransBtn').style.display = 'none';
+  }
+  document.getElementById('vocabResultCard').scrollIntoView({ behavior: 'smooth' });
+}
+
+function deleteVocabHistory(idx) {
+  vocabHistory.splice(idx, 1);
+  saveVocabHistory();
+  renderVocabHistory();
+  toast('已删除');
 }
 
 // ==================== INIT ====================
