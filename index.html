@@ -862,15 +862,6 @@ textarea::placeholder{color:var(--t3)}
   </main>
 </div>
 
-<!-- Learning Progress Float -->
-<div class="prog-float" id="progFloat" onclick="showProgressDetail()">
-  <span class="pf-icon">📊</span>
-  <div class="pf-info">
-    <div class="pf-val" id="pfToday">0 题</div>
-    <div class="pf-label">今日正确率 --%</div>
-  </div>
-</div>
-
 <!-- Settings Modal -->
 <div class="modal-overlay hidden" id="settingsModal">
   <div class="modal">
@@ -912,28 +903,6 @@ textarea::placeholder{color:var(--t3)}
   </div>
 </div>
 
-<!-- Progress Detail Modal -->
-<div class="modal-overlay hidden" id="progressModal">
-  <div class="modal prog-detail-modal">
-    <h3>📊 学习进度</h3>
-    <div class="pd-stats">
-      <div class="pd-stat"><div class="pds-big" id="pdTotal">0</div><div class="pds-lbl">累计刷题</div></div>
-      <div class="pd-stat"><div class="pds-big" id="pdRate">--%</div><div class="pds-lbl">累计正确率</div></div>
-    </div>
-    <div class="pd-section">
-      <div class="pd-sh">近7天刷题</div>
-      <div class="chart-row" id="chartRow"></div>
-    </div>
-    <div class="pd-section">
-      <div class="pd-sh">各题型正确率</div>
-      <div class="type-acc-row" id="typeAccRow"></div>
-    </div>
-    <div class="modal-btns" style="margin-top:14px;">
-      <button class="btn btn-s btn-sm" onclick="closeProgressDetail()">关闭</button>
-    </div>
-  </div>
-</div>
-
 <!-- Sync Modal -->
 <div class="modal-overlay hidden" id="syncModal">
   <div class="modal" style="max-width:420px;">
@@ -947,28 +916,6 @@ textarea::placeholder{color:var(--t3)}
     <div id="syncTextStatus" style="text-align:center;font-size:12px;"></div>
     <div class="modal-btns">
       <button class="btn btn-s btn-sm" onclick="closeSyncModal()">关闭</button>
-    </div>
-  </div>
-</div>
-
-<!-- Progress Detail Modal -->
-<div class="modal-overlay hidden" id="progressModal">
-  <div class="modal prog-detail-modal">
-    <h3>📊 学习进度</h3>
-    <div class="pd-stats">
-      <div class="pd-stat"><div class="pds-big" id="pdTotal">0</div><div class="pds-lbl">累计刷题</div></div>
-      <div class="pd-stat"><div class="pds-big" id="pdRate">--%</div><div class="pds-lbl">累计正确率</div></div>
-    </div>
-    <div class="pd-section">
-      <div class="pd-sh">近7天刷题</div>
-      <div class="chart-row" id="chartRow"></div>
-    </div>
-    <div class="pd-section">
-      <div class="pd-sh">各题型正确率</div>
-      <div class="type-acc-row" id="typeAccRow"></div>
-    </div>
-    <div class="modal-btns" style="margin-top:14px;">
-      <button class="btn btn-s btn-sm" onclick="closeProgressDetail()">关闭</button>
     </div>
   </div>
 </div>
@@ -2179,6 +2126,13 @@ function renderQuizTab() {
       </div>
     </div>
     <div class="type-tabs" id="typeTabs"></div>
+    <div class="prog-row">
+      <div class="prog-item"><div class="pv" id="pTotal">0</div><div class="pl">总题</div></div>
+      <div class="prog-item"><div class="pv" id="pDone">0</div><div class="pl">已答</div></div>
+      <div class="prog-item"><div class="pv" id="pCorrect" style="color:var(--green);">0</div><div class="pl">正确</div></div>
+      <div class="prog-item"><div class="pv" id="pWrong" style="color:var(--red);">0</div><div class="pl">错误</div></div>
+    </div>
+    <div class="prog-track"><div class="prog-bar g" id="barG" style="width:0%"></div><div class="prog-bar r" id="barR" style="width:0%"></div></div>
     <div class="answer-sheet" id="answerSheet"></div>
     <div class="card" id="examCard">
       <div class="exam-hd"><span class="idx" id="qIdx">第 1/1 题</span><span class="type-tag" id="qTag">单选题</span></div>
@@ -2860,81 +2814,7 @@ function recordAnswer(isCorrect) {
   }
 
   localStorage.setItem(LS_PROGRESS, JSON.stringify(progress));
-  updateProgressFloat();
 }
-
-function updateProgressFloat() {
-  const el = document.getElementById('pfToday');
-  const lb = document.querySelector('.prog-float .pf-label');
-  if (!el || !lb) return;
-
-  const raw = localStorage.getItem(LS_PROGRESS);
-  const progress = raw ? JSON.parse(raw) : { daily: {} };
-  const today = new Date().toISOString().slice(0, 10);
-  const td = progress.daily[today];
-  if (td && td.total > 0) {
-    const pct = Math.round(td.correct / td.total * 100);
-    el.textContent = td.total + ' 题';
-    lb.textContent = '今日正确率 ' + pct + '%';
-  } else {
-    el.textContent = '0 题';
-    lb.textContent = '今日正确率 --%';
-  }
-}
-
-function showProgressDetail() {
-  const raw = localStorage.getItem(LS_PROGRESS);
-  const progress = raw ? JSON.parse(raw) : { daily: {}, byType: {} };
-
-  // Cumulative stats
-  let total = 0, correct = 0;
-  Object.values(progress.daily).forEach(d => { total += d.total; correct += d.correct; });
-  document.getElementById('pdTotal').textContent = total;
-  document.getElementById('pdRate').textContent = total > 0 ? Math.round(correct / total * 100) + '%' : '--%';
-
-  // 7-day bar chart
-  const days = [];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    const key = d.toISOString().slice(0, 10);
-    const lbl = (i === 0 ? '今天' : (d.getMonth() + 1) + '/' + d.getDate());
-    const dd = progress.daily[key];
-    days.push({ label: lbl, total: dd ? dd.total : 0, correct: dd ? dd.correct : 0 });
-  }
-  const maxTotal = Math.max(...days.map(d => d.total), 1);
-  const chartRow = document.getElementById('chartRow');
-  chartRow.innerHTML = days.map(d => {
-    const h = Math.max(d.total / maxTotal * 90, d.total > 0 ? 8 : 0);
-    const pct = d.total > 0 ? Math.round(d.correct / d.total * 100) + '%' : '';
-    return '<div class="chart-col"><div class="chart-rate">' + (pct || '') + '</div><div class="chart-bar-wrap"><div class="chart-bar" style="height:' + h + 'px;' + (d.total === 0 ? 'opacity:.3' : '') + '"></div></div><div class="chart-label">' + d.label + '</div></div>';
-  }).join('');
-
-  // Per-type accuracy
-  const types = [
-    { key: 'single', label: '单选', cls: 'ta-tag' },
-    { key: 'multiple', label: '多选', cls: 'ta-tag' },
-    { key: 'tf', label: '判断', cls: 'ta-tag' },
-    { key: 'short', label: '简答', cls: 'ta-tag' },
-    { key: 'essay', label: '论述', cls: 'ta-tag' }
-  ];
-  const typeColors = { single: 'var(--accent)', multiple: 'var(--purple)', tf: 'var(--teal)', short: 'var(--amber)', essay: 'var(--green)' };
-  document.getElementById('typeAccRow').innerHTML = types.map(t => {
-    const d = progress.byType[t.key];
-    const pct = d && d.total > 0 ? Math.round(d.correct / d.total * 100) : 0;
-    const cnt = d ? d.total : 0;
-    return '<div class="type-acc-item"><span class="' + t.cls + '" style="background:' + (typeColors[t.key] + '18') + ';color:' + typeColors[t.key] + '">' + t.label + '</span><span class="ta-bar-wrap"><span class="ta-bar" style="width:' + pct + '%;background:' + typeColors[t.key] + '"></span></span><span class="ta-pct">' + (cnt > 0 ? pct + '%' : '--') + '</span></div>';
-  }).join('');
-
-  document.getElementById('progressModal').classList.remove('hidden');
-}
-
-function closeProgressDetail() {
-  document.getElementById('progressModal').classList.add('hidden');
-}
-
-// Init progress float on load
-updateProgressFloat();
 
 let chatHistory = [];
 const CHAT_SYS = '你是「喜刷刷」应用中的AI学习助手。你的职责是帮助用户解答学习中的疑问。回答要求：1.简洁清晰，用中文回答；2.如果用户有学习资料相关的问题，给出准确解答；3.鼓励用户思考，引导式提问；4.回答长度适中，不要过长。';
