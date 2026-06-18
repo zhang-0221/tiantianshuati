@@ -1589,13 +1589,20 @@ function startPractice(id, mode, reset) {
     questions = questions.filter(q => submitted[q.id] && !correct[q.id] && !cut[q.id]);
     if (!questions.length) { toast('没有错题！', 'ok'); return; }
     reviewMode = 'wrong';
+    // 错题集作为全新小题库：清除这些错题的旧答案
+    for (const q of questions) {
+      delete e.userAnswers[q.id];
+      delete e.isSubmitted[q.id];
+      delete e.isCorrect[q.id];
+    }
+    saveLib();
   }
 
   activeExam = {
     id: e.id, name: e.name, createdAt: e.createdAt, questions,
-    userAnswers: reset ? {} : (e.userAnswers || {}),
-    isSubmitted: reset ? {} : (e.isSubmitted || {}),
-    isCorrect: reset ? {} : (e.isCorrect || {}),
+    userAnswers: (reset || mode === 'wrong') ? {} : (e.userAnswers || {}),
+    isSubmitted: (reset || mode === 'wrong') ? {} : (e.isSubmitted || {}),
+    isCorrect: (reset || mode === 'wrong') ? {} : (e.isCorrect || {}),
     cutWrong: reset ? {} : (e.cutWrong || {}),
     currentFilter: 'all', currentIndex: 0, reviewMode
   };
@@ -2172,13 +2179,6 @@ function renderQuizTab() {
       </div>
     </div>
     <div class="type-tabs" id="typeTabs"></div>
-    <div class="prog-row">
-      <div class="prog-item"><div class="pv" id="pTotal">0</div><div class="pl">总题</div></div>
-      <div class="prog-item"><div class="pv" id="pDone">0</div><div class="pl">已答</div></div>
-      <div class="prog-item"><div class="pv" id="pCorrect" style="color:var(--green);">0</div><div class="pl">正确</div></div>
-      <div class="prog-item"><div class="pv" id="pWrong" style="color:var(--red);">0</div><div class="pl">错误</div></div>
-    </div>
-    <div class="prog-track"><div class="prog-bar g" id="barG" style="width:0%"></div><div class="prog-bar r" id="barR" style="width:0%"></div></div>
     <div class="answer-sheet" id="answerSheet"></div>
     <div class="card" id="examCard">
       <div class="exam-hd"><span class="idx" id="qIdx">第 1/1 题</span><span class="type-tag" id="qTag">单选题</span></div>
@@ -2245,7 +2245,7 @@ function renderExam() {
   }
   document.getElementById('prevBtn').disabled = currentIndex === 0;
   document.getElementById('nextBtn').disabled = currentIndex >= filteredQuestions.length - 1;
-  document.getElementById('finishBtn').style.display = activeExam.questions.every((_, i) => activeExam.isSubmitted[i]) ? '' : 'none';
+  document.getElementById('finishBtn').style.display = activeExam.questions.every(q => activeExam.isSubmitted[q.id]) ? '' : 'none';
   // Show 斩题 button in wrong-review mode
   const cutArea = document.getElementById('cutBtnArea');
   if (cutArea && activeExam.reviewMode === 'wrong') {
@@ -2278,7 +2278,7 @@ function clickSingle(i) {
   if (activeExam.isSubmitted[oi]) return;
   activeExam.userAnswers[oi] = i;
   activeExam.isSubmitted[oi] = true;
-  activeExam.isCorrect[oi] = i === activeExam.questions[oi].correctIndex;
+  activeExam.isCorrect[oi] = i === activeExam.questions.find(q => q.id === oi).correctIndex;
   recordAnswer(activeExam.isCorrect[oi]);
   renderExam(); updateProgress(); checkFinish();
   // Auto-advance if correct and toggle is on
@@ -2335,7 +2335,7 @@ function renderMulti(area, q, oi, sub) {
 
 function selectAll(oi) {
   if (activeExam.isSubmitted[oi]) return;
-  const q = activeExam.questions[oi];
+  const q = activeExam.questions.find(q => q.id === oi);
   const allSelected = (q.options||[]).every((_, i) => (activeExam.userAnswers[oi]||[]).includes(i));
   if (allSelected) {
     activeExam.userAnswers[oi] = [];
@@ -2346,7 +2346,7 @@ function selectAll(oi) {
 }
 
 function togM(i) { const oi = origIdx(); if (activeExam.isSubmitted[oi]) return; if (!activeExam.userAnswers[oi]) activeExam.userAnswers[oi] = []; const a = activeExam.userAnswers[oi]; const p = a.indexOf(i); p >= 0 ? a.splice(p, 1) : a.push(i); renderExam(); }
-function subM(oi) { const q = activeExam.questions[oi]; const ua = activeExam.userAnswers[oi] || []; const cs = new Set(q.correctIndexes||[]); activeExam.isSubmitted[oi] = true; activeExam.isCorrect[oi] = cs.size === ua.length && [...cs].every(c => ua.includes(c)); recordAnswer(activeExam.isCorrect[oi]); renderExam(); updateProgress(); checkFinish(); }
+function subM(oi) { const q = activeExam.questions.find(q => q.id === oi); const ua = activeExam.userAnswers[oi] || []; const cs = new Set(q.correctIndexes||[]); activeExam.isSubmitted[oi] = true; activeExam.isCorrect[oi] = cs.size === ua.length && [...cs].every(c => ua.includes(c)); recordAnswer(activeExam.isCorrect[oi]); renderExam(); updateProgress(); checkFinish(); }
 
 // -- Short --
 function renderShort(area, q, oi, sub) {
@@ -2403,7 +2403,7 @@ function clickTf(i) {
   if (activeExam.isSubmitted[oi]) return;
   activeExam.userAnswers[oi] = i;
   activeExam.isSubmitted[oi] = true;
-  activeExam.isCorrect[oi] = i === activeExam.questions[oi].correctIndex;
+  activeExam.isCorrect[oi] = i === activeExam.questions.find(q => q.id === oi).correctIndex;
   recordAnswer(activeExam.isCorrect[oi]);
   renderExam(); updateProgress(); checkFinish();
   if (autoAdvance && activeExam.isCorrect[oi] && currentIndex < filteredQuestions.length - 1) {
@@ -2413,7 +2413,7 @@ function clickTf(i) {
 
 // ==================== HELPERS ====================
 function expBox(q) { return q.explanation ? `<div class="exp-box show"><div class="exp-label">解析</div>${escH(q.explanation).replace(/\n/g,'<br>')}</div>` : ''; }
-function checkFinish() { const fb = document.getElementById('finishBtn'); if (fb) fb.style.display = activeExam.questions.every((_, i) => activeExam.isSubmitted[i]) ? '' : 'none'; }
+function checkFinish() { const fb = document.getElementById('finishBtn'); if (fb) fb.style.display = activeExam.questions.every(q => activeExam.isSubmitted[q.id]) ? '' : 'none'; }
 function updateProgress() {
   if (!activeExam) return;
   const t = activeExam.questions.length;
@@ -2495,7 +2495,7 @@ function showResults() {
 
 function reviewWrong() {
   if (!activeExam) return;
-  const wrong = activeExam.questions.filter((_, i) => activeExam.isSubmitted[i] && !activeExam.isCorrect[i] && !activeExam.cutWrong[i]);
+  const wrong = activeExam.questions.filter(q => activeExam.isSubmitted[q.id] && !activeExam.isCorrect[q.id] && !activeExam.cutWrong[q.id]);
   if (!wrong.length) { toast('没有错题了！', 'ok'); return; }
   filteredQuestions = wrong; currentIndex = 0; activeExam.currentFilter = 'all'; activeExam.currentIndex = 0;
   activeExam.reviewMode = 'wrong';
@@ -2852,7 +2852,7 @@ function recordAnswer(isCorrect) {
   progress.daily[today].total++;
   if (isCorrect) progress.daily[today].correct++;
 
-  const q = activeExam.questions[oi];
+  const q = activeExam.questions.find(q => q.id === oi);
   if (q && q.type) {
     if (!progress.byType[q.type]) progress.byType[q.type] = { total: 0, correct: 0 };
     progress.byType[q.type].total++;
