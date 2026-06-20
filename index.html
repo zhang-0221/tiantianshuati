@@ -1236,13 +1236,14 @@ function openSplitModal(id) {
   splitSelected = new Set();
   const typeLabels = {single:'单选',multiple:'多选',tf:'判断',short:'简答',essay:'论述'};
   const typeCss = {single:'tag-s',multiple:'tag-m',tf:'tag-t',short:'tag-h',essay:'tag-e'};
-  document.getElementById('splitQuestionList').innerHTML = e.questions.map((q, i) => `
-    <label class="opt-row" style="margin-bottom:4px;align-items:flex-start;cursor:pointer;display:flex;padding:6px 8px;border-radius:6px;" for="splitCb${q.id}">
-      <input type="checkbox" id="splitCb${q.id}" onchange="splitToggleQ(${q.id})" style="flex-shrink:0;margin-top:3px;accent-color:var(--accent);" ${splitSelected.has(q.id) ? 'checked' : ''}>
+  document.getElementById('splitQuestionList').innerHTML = e.questions.map((q, i) => {
+    const sel = splitSelected.has(q.id);
+    return `<div class="opt-row" style="margin-bottom:4px;align-items:flex-start;padding:6px 8px;border-radius:6px;cursor:pointer;${sel?'background:var(--accent-l);':''}" id="splitRow${q.id}" onclick="var cb=document.getElementById('splitCb${q.id}');cb.checked=!cb.checked;splitToggleQ(${q.id},cb)">
+      <input type="checkbox" id="splitCb${q.id}" style="flex-shrink:0;margin-top:3px;accent-color:var(--accent);pointer-events:none;" ${sel ? 'checked' : ''}>
       <span class="type-tag ${typeCss[q.type] || 'tag-s'}" style="flex-shrink:0;font-size:9px;">${typeLabels[q.type] || q.type}</span>
       <span style="font-size:12px;line-height:1.4;flex:1;">${escH(q.question).substring(0, 60)}${q.question.length > 60 ? '…' : ''}</span>
-    </label>
-  `).join('');
+    </div>`;
+  }).join('');
   document.getElementById('splitModal').classList.remove('hidden');
 }
 
@@ -1252,9 +1253,15 @@ function closeSplitModal() {
   splitSelected = new Set();
 }
 
-function splitToggleQ(qid) {
-  if (splitSelected.has(qid)) splitSelected.delete(qid);
-  else splitSelected.add(qid);
+function splitToggleQ(qid, cb) {
+  const row = document.getElementById('splitRow' + qid);
+  if (cb.checked) {
+    splitSelected.add(qid);
+    if (row) row.style.background = 'var(--accent-l)';
+  } else {
+    splitSelected.delete(qid);
+    if (row) row.style.background = '';
+  }
 }
 
 function splitSelectAll() {
@@ -1292,25 +1299,27 @@ function doSplit() {
   const newName = e.name + ' · 拆分' + now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
   const splitQuestions = [];
   const keepQuestions = [];
+  const oldToNewId = {}; // map old question ID → new ID in keepQuestions
 
   for (const q of e.questions) {
     if (splitSelected.has(q.id)) {
       splitQuestions.push({...q, id: splitQuestions.length});
     } else {
-      keepQuestions.push({...q, id: keepQuestions.length});
+      const newId = keepQuestions.length;
+      oldToNewId[q.id] = newId;
+      keepQuestions.push({...q, id: newId});
     }
   }
 
-  // Update original exam
+  // Update original exam with remapped IDs
   e.questions = keepQuestions;
-  // Clear answers for removed questions
   const newUserAnswers = {}, newSubmitted = {}, newCorrect = {}, newCutWrong = {};
-  keepQuestions.forEach(q => {
-    if (e.userAnswers && e.userAnswers[q.id] !== undefined) newUserAnswers[q.id] = e.userAnswers[q.id];
-    if (e.isSubmitted && e.isSubmitted[q.id]) newSubmitted[q.id] = e.isSubmitted[q.id];
-    if (e.isCorrect && e.isCorrect[q.id] !== undefined) newCorrect[q.id] = e.isCorrect[q.id];
-    if (e.cutWrong && e.cutWrong[q.id]) newCutWrong[q.id] = e.cutWrong[q.id];
-  });
+  for (const [oldId, newId] of Object.entries(oldToNewId)) {
+    if (e.userAnswers && e.userAnswers[oldId] !== undefined) newUserAnswers[newId] = e.userAnswers[oldId];
+    if (e.isSubmitted && e.isSubmitted[oldId]) newSubmitted[newId] = e.isSubmitted[oldId];
+    if (e.isCorrect && e.isCorrect[oldId] !== undefined) newCorrect[newId] = e.isCorrect[oldId];
+    if (e.cutWrong && e.cutWrong[oldId]) newCutWrong[newId] = e.cutWrong[oldId];
+  }
   e.userAnswers = newUserAnswers;
   e.isSubmitted = newSubmitted;
   e.isCorrect = newCorrect;
