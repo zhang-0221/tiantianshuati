@@ -1237,11 +1237,11 @@ function openSplitModal(id) {
   const typeLabels = {single:'单选',multiple:'多选',tf:'判断',short:'简答',essay:'论述'};
   const typeCss = {single:'tag-s',multiple:'tag-m',tf:'tag-t',short:'tag-h',essay:'tag-e'};
   document.getElementById('splitQuestionList').innerHTML = e.questions.map((q, i) => `
-    <div class="opt-row" style="margin-bottom:4px;align-items:flex-start;cursor:pointer;" onclick="splitToggleQ(${q.id})">
-      <input type="checkbox" style="pointer-events:none;flex-shrink:0;margin-top:3px;" ${splitSelected.has(q.id) ? 'checked' : ''} id="splitCb${q.id}">
+    <label class="opt-row" style="margin-bottom:4px;align-items:flex-start;cursor:pointer;display:flex;padding:6px 8px;border-radius:6px;" for="splitCb${q.id}">
+      <input type="checkbox" id="splitCb${q.id}" onchange="splitToggleQ(${q.id})" style="flex-shrink:0;margin-top:3px;accent-color:var(--accent);" ${splitSelected.has(q.id) ? 'checked' : ''}>
       <span class="type-tag ${typeCss[q.type] || 'tag-s'}" style="flex-shrink:0;font-size:9px;">${typeLabels[q.type] || q.type}</span>
       <span style="font-size:12px;line-height:1.4;flex:1;">${escH(q.question).substring(0, 60)}${q.question.length > 60 ? '…' : ''}</span>
-    </div>
+    </label>
   `).join('');
   document.getElementById('splitModal').classList.remove('hidden');
 }
@@ -1255,20 +1255,17 @@ function closeSplitModal() {
 function splitToggleQ(qid) {
   if (splitSelected.has(qid)) splitSelected.delete(qid);
   else splitSelected.add(qid);
-  const cb = document.getElementById('splitCb' + qid);
-  if (cb) cb.checked = splitSelected.has(qid);
 }
 
 function splitSelectAll() {
   const e = library.find(x => x.id === splitExamId);
   if (!e) return;
-  e.questions.forEach(q => splitSelected.add(q.id));
-  openSplitModal(splitExamId); // re-render
+  e.questions.forEach(q => { splitSelected.add(q.id); const cb = document.getElementById('splitCb'+q.id); if (cb) cb.checked = true; });
 }
 
 function splitDeselectAll() {
   splitSelected = new Set();
-  openSplitModal(splitExamId);
+  document.querySelectorAll('#splitQuestionList input[type=checkbox]').forEach(cb => cb.checked = false);
 }
 
 function splitSelectWrong() {
@@ -1277,9 +1274,11 @@ function splitSelectWrong() {
   const submitted = e.isSubmitted || {}, correct = e.isCorrect || {};
   splitSelected = new Set();
   e.questions.forEach(q => {
-    if (submitted[q.id] && !correct[q.id]) splitSelected.add(q.id);
+    const isWrong = submitted[q.id] && !correct[q.id];
+    const cb = document.getElementById('splitCb'+q.id);
+    if (isWrong) { splitSelected.add(q.id); if (cb) cb.checked = true; }
+    else { splitSelected.delete(q.id); if (cb) cb.checked = false; }
   });
-  openSplitModal(splitExamId);
 }
 
 function doSplit() {
