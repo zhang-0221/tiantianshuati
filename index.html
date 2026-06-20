@@ -775,7 +775,6 @@ textarea::placeholder{color:var(--t3)}
           <button class="btn btn-s btn-xs" onclick="document.getElementById('importFileInput').click()" title="从导出的文件恢复题库">📥 导入</button>
           <input type="file" id="importFileInput" accept=".json" style="display:none" onchange="importLibrary(this)">
           <button class="btn btn-s btn-xs" onclick="showSyncModal()" title="生成同步码，手机输入即可同步">☁️ 同步</button>
-          <button class="btn btn-s btn-xs" id="restoreBackupBtn" onclick="restoreMergeBackup()" style="display:none;color:var(--amber);border-color:var(--amber);" title="恢复合并时删除的原试卷">↩ 恢复</button>
           <button class="btn btn-s btn-xs" id="mergeBtn" onclick="toggleMergeMode()" style="margin-left:auto;" title="勾选多份试卷合并为一份">📦 合并</button>
         </div>
         <div class="merge-toolbar" id="mergeToolbar">
@@ -893,15 +892,29 @@ textarea::placeholder{color:var(--t3)}
 
 <!-- Split Exam Modal -->
 <div class="modal-overlay hidden" id="splitModal">
-  <div class="modal edit-modal" style="max-width:560px;max-height:85vh;overflow-y:auto;">
-    <h3>📤 拆分试卷</h3>
-    <p style="font-size:12px;color:var(--t3);margin-bottom:12px;">勾选要拆分出去的题目，它们将成为一个新试卷，并从当前试卷中移除。</p>
-    <div style="margin-bottom:8px;display:flex;gap:8px;">
-      <button class="btn btn-s btn-xs" onclick="splitSelectAll()">全选</button>
-      <button class="btn btn-s btn-xs" onclick="splitDeselectAll()">取消全选</button>
-      <button class="btn btn-s btn-xs" onclick="splitSelectWrong()" style="color:var(--red);border-color:var(--red);">选错题</button>
+  <div class="modal" style="max-width:420px;">
+    <h3 id="splitModalTitle">📤 拆分试卷</h3>
+    <p style="font-size:12px;color:var(--t3);margin-bottom:12px;">从当前试卷拆分出题目，生成一份新试卷。</p>
+    <div style="margin-bottom:12px;">
+      <label style="font-size:12px;font-weight:600;color:var(--t2);display:block;margin-bottom:4px;">拆分数量：<span id="splitCountLabel" style="color:var(--accent);">1 题</span></label>
+      <input type="range" id="splitCount" min="1" max="1" value="1" oninput="updateSplitCount(this.value)" style="width:100%;accent-color:var(--accent);">
     </div>
-    <div id="splitQuestionList" style="max-height:50vh;overflow-y:auto;"></div>
+    <div style="margin-bottom:12px;">
+      <label style="font-size:12px;font-weight:600;color:var(--t2);display:block;margin-bottom:6px;">拆分方式</label>
+      <div style="display:flex;gap:8px;">
+        <label style="flex:1;padding:10px;border:2px solid var(--accent);border-radius:8px;text-align:center;cursor:pointer;font-size:13px;font-weight:600;background:var(--accent-l);color:var(--accent);" id="splitModeSeqLabel" onclick="updateSplitMode('sequential')">
+          <input type="radio" name="splitMode" value="sequential" checked style="display:none;"> 📖 顺序
+        </label>
+        <label style="flex:1;padding:10px;border:2px solid var(--border);border-radius:8px;text-align:center;cursor:pointer;font-size:13px;font-weight:600;" id="splitModeRandLabel" onclick="updateSplitMode('random')">
+          <input type="radio" name="splitMode" value="random" style="display:none;"> 🔀 随机
+        </label>
+      </div>
+    </div>
+    <div style="margin-bottom:14px;">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
+        <input type="checkbox" id="splitKeepOriginals" checked style="accent-color:var(--green);width:16px;height:16px;"> 在原试卷保留这些题目（取消则删除）
+      </label>
+    </div>
     <div class="modal-btns">
       <button class="btn btn-s btn-sm" onclick="closeSplitModal()">取消</button>
       <button class="btn btn-p btn-sm" id="splitDoBtn" onclick="doSplit()">拆分为新试卷</button>
@@ -1011,7 +1024,7 @@ let memorizeMode = false; // false=刷题模式, true=背题模式
 let mergeMode = false;
 let mergeSelected = new Set();
 let splitExamId = null;
-let splitSelected = new Set();
+let splitMode = 'sequential';
 
 // Recite state
 let reciteExamId = null;
@@ -1080,12 +1093,10 @@ updateKeyBtn();
 function openSettings() { document.getElementById('settingsModal').classList.remove('hidden'); document.getElementById('apiKeyInput').value = apiKey; }
 function closeSettings() { document.getElementById('settingsModal').classList.add('hidden'); }
 function saveApiKey() { apiKey = document.getElementById('apiKeyInput').value.trim(); localStorage.setItem(LS_KEY, apiKey); updateKeyBtn(); closeSettings(); toast(apiKey ? 'API Key 已保存' : 'API Key 已清除', 'ok'); }
-['settingsModal','editModal','resumeModal','splitModal'].forEach(id => {
-  const el = document.getElementById(id);
-  if (!el) return;
-  const fn = {settingsModal:closeSettings,editModal:closeEditModal,resumeModal:closeResumeModal,splitModal:closeSplitModal}[id];
-  el.addEventListener('click', function(e) { if (e.target === el) fn(); });
-});
+document.getElementById('settingsModal').addEventListener('click', function(e) { if (e === this) closeSettings(); });
+document.getElementById('editModal').addEventListener('click', function(e) { if (e === this) closeEditModal(); });
+document.getElementById('resumeModal').addEventListener('click', function(e) { if (e === this) closeResumeModal(); });
+var splitModalEl=document.getElementById('splitModal');if(splitModalEl)splitModalEl.addEventListener('click',function(e){if(e.target===splitModalEl)closeSplitModal();});
 
 // ==================== LIBRARY ====================
 function loadLib() { try { library = JSON.parse(localStorage.getItem(LS_LIB) || '[]'); } catch { library = []; } }
@@ -1189,12 +1200,9 @@ function confirmMerge(keepOriginals) {
   library.push(mergedExam);
 
   if (!keepOriginals) {
-    // 备份原试卷，防止误删
-    const backup = JSON.parse(JSON.stringify(selected));
-    localStorage.setItem('ttsk_merge_backup', JSON.stringify(backup));
     library = library.filter(e => !mergeSelected.has(e.id));
     if (activeExam && mergeSelected.has(activeExam.id)) { activeExam = null; showLibView(); }
-    toast('原试卷已备份，可通过「恢复合并前试卷」找回', 'ok');
+  }
 
   saveLib();
   mergeMode = false; mergeSelected.clear();
@@ -1208,145 +1216,139 @@ function confirmMerge(keepOriginals) {
   toast('已合并 ' + selected.length + ' 份试卷，共 ' + allQuestions.length + ' 题 · ' + (keepOriginals ? '已保留原试卷' : '已删除原试卷'), 'ok');
 }
 
-function restoreMergeBackup() {
-  const raw = localStorage.getItem('ttsk_merge_backup');
-  if (!raw) { toast('没有可恢复的合并备份', 'err'); return; }
-  try {
-    const backup = JSON.parse(raw);
-    if (!backup.length) { toast('备份为空', 'err'); return; }
-    if (!confirm('将恢复最近合并时删除的 ' + backup.length + ' 份原试卷。确定恢复？')) return;
-    for (const e of backup) {
-      // Avoid duplicate IDs
-      if (!library.find(x => x.id === e.id)) {
-        library.push(e);
-      }
-    }
-    saveLib();
-    localStorage.removeItem('ttsk_merge_backup');
-    renderLib();
-    toast('已恢复 ' + backup.length + ' 份试卷', 'ok');
-  } catch (err) {
-    toast('备份数据损坏，无法恢复', 'err');
-  }
-}
-
 // ==================== SPLIT EXAM ====================
 function openSplitModal(id) {
   const e = library.find(x => x.id === id);
-  if (!e) return;
+  if (!e || e.questions.length < 2) { toast('至少需要2道题才能拆分', 'err'); return; }
   splitExamId = id;
-  splitSelected = new Set();
-  const typeLabels = {single:'单选',multiple:'多选',tf:'判断',short:'简答',essay:'论述'};
-  const typeCss = {single:'tag-s',multiple:'tag-m',tf:'tag-t',short:'tag-h',essay:'tag-e'};
-  document.getElementById('splitQuestionList').innerHTML = e.questions.map((q, i) => {
-    const sel = splitSelected.has(q.id);
-    return `<div class="opt-row" style="margin-bottom:4px;align-items:flex-start;padding:6px 8px;border-radius:6px;cursor:pointer;${sel?'background:var(--accent-l);':''}" id="splitRow${q.id}" onclick="var cb=document.getElementById('splitCb${q.id}');cb.checked=!cb.checked;splitToggleQ(${q.id},cb)">
-      <input type="checkbox" id="splitCb${q.id}" style="flex-shrink:0;margin-top:3px;accent-color:var(--accent);pointer-events:none;" ${sel ? 'checked' : ''}>
-      <span class="type-tag ${typeCss[q.type] || 'tag-s'}" style="flex-shrink:0;font-size:9px;">${typeLabels[q.type] || q.type}</span>
-      <span style="font-size:12px;line-height:1.4;flex:1;">${escH(q.question).substring(0, 60)}${q.question.length > 60 ? '…' : ''}</span>
-    </div>`;
-  }).join('');
+  splitMode = 'sequential';
+  const max = e.questions.length - 1;
+  document.getElementById('splitCount').max = max;
+  document.getElementById('splitCount').value = Math.min(Math.floor(max/2) || 1, max);
+  document.getElementById('splitCountLabel').textContent = document.getElementById('splitCount').value + ' 题';
+  document.getElementById('splitKeepOriginals').checked = true;
+  updateSplitMode('sequential');
   document.getElementById('splitModal').classList.remove('hidden');
 }
 
 function closeSplitModal() {
   document.getElementById('splitModal').classList.add('hidden');
   splitExamId = null;
-  splitSelected = new Set();
 }
 
-function splitToggleQ(qid, cb) {
-  const row = document.getElementById('splitRow' + qid);
-  if (cb.checked) {
-    splitSelected.add(qid);
-    if (row) row.style.background = 'var(--accent-l)';
+function updateSplitCount(val) {
+  document.getElementById('splitCountLabel').textContent = val + ' 题';
+}
+
+function updateSplitMode(mode) {
+  splitMode = mode;
+  const seqLabel = document.getElementById('splitModeSeqLabel');
+  const randLabel = document.getElementById('splitModeRandLabel');
+  if (mode === 'sequential') {
+    seqLabel.style.borderColor = 'var(--accent)';
+    seqLabel.style.background = 'var(--accent-l)';
+    seqLabel.style.color = 'var(--accent)';
+    randLabel.style.borderColor = 'var(--border)';
+    randLabel.style.background = '';
+    randLabel.style.color = '';
   } else {
-    splitSelected.delete(qid);
-    if (row) row.style.background = '';
+    randLabel.style.borderColor = 'var(--accent)';
+    randLabel.style.background = 'var(--accent-l)';
+    randLabel.style.color = 'var(--accent)';
+    seqLabel.style.borderColor = 'var(--border)';
+    seqLabel.style.background = '';
+    seqLabel.style.color = '';
   }
-}
-
-function splitSelectAll() {
-  const e = library.find(x => x.id === splitExamId);
-  if (!e) return;
-  e.questions.forEach(q => { splitSelected.add(q.id); const cb = document.getElementById('splitCb'+q.id); if (cb) cb.checked = true; });
-}
-
-function splitDeselectAll() {
-  splitSelected = new Set();
-  document.querySelectorAll('#splitQuestionList input[type=checkbox]').forEach(cb => cb.checked = false);
-}
-
-function splitSelectWrong() {
-  const e = library.find(x => x.id === splitExamId);
-  if (!e) return;
-  const submitted = e.isSubmitted || {}, correct = e.isCorrect || {};
-  splitSelected = new Set();
-  e.questions.forEach(q => {
-    const isWrong = submitted[q.id] && !correct[q.id];
-    const cb = document.getElementById('splitCb'+q.id);
-    if (isWrong) { splitSelected.add(q.id); if (cb) cb.checked = true; }
-    else { splitSelected.delete(q.id); if (cb) cb.checked = false; }
-  });
 }
 
 function doSplit() {
   if (!splitExamId) return;
   const e = library.find(x => x.id === splitExamId);
   if (!e) return;
-  if (splitSelected.size === 0) { toast('请至少选择一道题', 'err'); return; }
-  if (splitSelected.size >= e.questions.length) { toast('不能拆分全部题目，请留一些在原试卷', 'err'); return; }
+  const count = parseInt(document.getElementById('splitCount').value);
+  const keepOriginals = document.getElementById('splitKeepOriginals').checked;
+  if (count < 1 || count >= e.questions.length) { toast('拆分数量需在1到'+(e.questions.length-1)+'之间', 'err'); return; }
 
-  const now = new Date();
-  const newName = e.name + ' · 拆分' + now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
+  // Select question indices based on mode
+  let selectedIndices = [];
+  if (splitMode === 'sequential') {
+    // First N questions
+    for (let i = 0; i < count; i++) selectedIndices.push(i);
+  } else {
+    // Random selection
+    const pool = e.questions.map((_, i) => i);
+    for (let i = 0; i < count; i++) {
+      const j = Math.floor(Math.random() * pool.length);
+      selectedIndices.push(pool[j]);
+      pool.splice(j, 1);
+    }
+    selectedIndices.sort((a, b) => a - b);
+  }
+
+  const selectedSet = new Set(selectedIndices);
   const splitQuestions = [];
   const keepQuestions = [];
-  const oldToNewId = {}; // map old question ID → new ID in keepQuestions
+  const oldToNewKeep = {};
+  const oldToNewSplit = {};
 
-  for (const q of e.questions) {
-    if (splitSelected.has(q.id)) {
-      splitQuestions.push({...q, id: splitQuestions.length});
+  for (let i = 0; i < e.questions.length; i++) {
+    if (selectedSet.has(i)) {
+      const newId = splitQuestions.length;
+      oldToNewSplit[e.questions[i].id] = newId;
+      splitQuestions.push({...e.questions[i], id: newId});
     } else {
       const newId = keepQuestions.length;
-      oldToNewId[q.id] = newId;
-      keepQuestions.push({...q, id: newId});
+      oldToNewKeep[e.questions[i].id] = newId;
+      keepQuestions.push({...e.questions[i], id: newId});
     }
   }
 
-  // Update original exam with remapped IDs
-  e.questions = keepQuestions;
-  const newUserAnswers = {}, newSubmitted = {}, newCorrect = {}, newCutWrong = {};
-  for (const [oldId, newId] of Object.entries(oldToNewId)) {
-    if (e.userAnswers && e.userAnswers[oldId] !== undefined) newUserAnswers[newId] = e.userAnswers[oldId];
-    if (e.isSubmitted && e.isSubmitted[oldId]) newSubmitted[newId] = e.isSubmitted[oldId];
-    if (e.isCorrect && e.isCorrect[oldId] !== undefined) newCorrect[newId] = e.isCorrect[oldId];
-    if (e.cutWrong && e.cutWrong[oldId]) newCutWrong[newId] = e.cutWrong[oldId];
-  }
-  e.userAnswers = newUserAnswers;
-  e.isSubmitted = newSubmitted;
-  e.isCorrect = newCorrect;
-  e.cutWrong = newCutWrong;
-  e.summary = { total: keepQuestions.length, done: Object.keys(newSubmitted).length, correct: Object.values(newCorrect).filter(v => v === true).length };
+  const remapAnswers = (oldObj, oldToNew) => {
+    const result = {};
+    for (const [oldId, newId] of Object.entries(oldToNew)) {
+      if (oldObj && oldObj[oldId] !== undefined) result[newId] = oldObj[oldId];
+    }
+    return result;
+  };
 
-  // Create new exam
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2,'0');
+  const mm = String(now.getMinutes()).padStart(2,'0');
+  const newName = e.name + ' · 拆分' + hh + ':' + mm;
+
   const newExam = {
     id: 'ex_' + Date.now(),
     name: newName,
     createdAt: now.toISOString(),
     questions: splitQuestions,
     outline: null,
-    userAnswers: {},
-    isSubmitted: {},
-    isCorrect: {},
-    cutWrong: {},
-    summary: { total: splitQuestions.length, done: 0, correct: 0 }
+    userAnswers: remapAnswers(e.userAnswers, oldToNewSplit),
+    isSubmitted: remapAnswers(e.isSubmitted, oldToNewSplit),
+    isCorrect: remapAnswers(e.isCorrect, oldToNewSplit),
+    cutWrong: remapAnswers(e.cutWrong, oldToNewSplit),
+    summary: null
   };
-  library.push(newExam);
+  newExam.summary = { total: splitQuestions.length, done: Object.keys(newExam.isSubmitted).length, correct: Object.values(newExam.isCorrect).filter(v => v === true).length };
+
+  if (keepOriginals) {
+    // Keep split questions in original too (just copy, don't remove)
+    // Original stays unchanged — split is a copy
+    library.push(newExam);
+  } else {
+    // Remove split questions from original
+    e.questions = keepQuestions;
+    e.userAnswers = remapAnswers(e.userAnswers, oldToNewKeep);
+    e.isSubmitted = remapAnswers(e.isSubmitted, oldToNewKeep);
+    e.isCorrect = remapAnswers(e.isCorrect, oldToNewKeep);
+    e.cutWrong = remapAnswers(e.cutWrong, oldToNewKeep);
+    e.summary = { total: keepQuestions.length, done: Object.keys(e.isSubmitted).length, correct: Object.values(e.isCorrect).filter(v => v === true).length };
+    library.push(newExam);
+  }
 
   saveLib();
   closeSplitModal();
   showExamDetail(e.id);
-  toast('已拆分出 ' + splitQuestions.length + ' 题为「' + newName + '」', 'ok');
+  toast('已拆分 ' + count + ' 题为「' + newName + '」' + (keepOriginals ? '，原试卷保留' : '，已从原试卷删除'), 'ok');
 }
 
 // ==================== EXPORT / IMPORT ====================
@@ -1469,9 +1471,6 @@ function renderLib() {
   if (library.length === 0) { grid.innerHTML = ''; empty.style.display = 'block'; document.getElementById('libCount').textContent = ''; return; }
   empty.style.display = 'none';
   document.getElementById('libCount').textContent = library.length + ' 份试卷';
-  // Show restore button if backup exists
-  const restoreBtn = document.getElementById('restoreBackupBtn');
-  if (restoreBtn) restoreBtn.style.display = localStorage.getItem('ttsk_merge_backup') ? '' : 'none';
   const mergeM = mergeMode;
   grid.innerHTML = library.map((e, idx) => {
     const d = new Date(e.createdAt);
@@ -1526,7 +1525,7 @@ function showExamDetail(id) {
       <div class="detail-header-actions">
         <button class="btn-back" onclick="backToLibFromDetail()">← 返回题库</button>
         <button class="btn-rename" onclick="event.stopPropagation();renameLibExam('${e.id}')">✏️ 重命名</button>
-        <button class="btn-rename" onclick="event.stopPropagation();openSplitModal('${e.id}')" title="将部分题目拆分到新试卷" style="color:var(--purple);">📤 拆分</button>
+        <button class="btn-rename" onclick="event.stopPropagation();openSplitModal('${e.id}')" title="拆分题目到新试卷" style="color:var(--accent);">📤 拆分</button>
       </div>
       <h2 class="detail-white-name">${escH(e.name)}</h2>
       <div class="detail-white-meta">${ds} · ${sTotal}题${bigQs.length > 0 ? ' + ' + bigQs.length + '道大题' : ''}</div>
@@ -1783,24 +1782,17 @@ document.getElementById('uploadZone').addEventListener('dragover', e => { e.prev
 document.getElementById('uploadZone').addEventListener('dragleave', e => e.currentTarget.classList.remove('dragover'));
 document.getElementById('uploadZone').addEventListener('drop', function(e) { e.preventDefault(); this.classList.remove('dragover'); if (e.dataTransfer.files.length) processFiles(Array.from(e.dataTransfer.files)); });
 // Recite import drag-drop
-(function(){
-  const rz=document.getElementById('reciteUploadZone');
-  if(!rz)return;
-  rz.addEventListener('dragover', e => { e.preventDefault(); e.currentTarget.classList.add('dragover'); });
-  rz.addEventListener('dragleave', e => e.currentTarget.classList.remove('dragover'));
-  rz.addEventListener('drop', function(e) { e.preventDefault(); this.classList.remove('dragover'); const f = e.dataTransfer.files[0]; if (f) handleReciteFileRaw(f); });
-})();
+document.getElementById('reciteUploadZone').addEventListener('dragover', e => { e.preventDefault(); e.currentTarget.classList.add('dragover'); });
+document.getElementById('reciteUploadZone').addEventListener('dragleave', e => e.currentTarget.classList.remove('dragover'));
+document.getElementById('reciteUploadZone').addEventListener('drop', function(e) { e.preventDefault(); this.classList.remove('dragover'); const f = e.dataTransfer.files[0]; if (f) handleReciteFileRaw(f); });
 function handleReciteFileRaw(file) {
   processReciteFileGetText(file).then(text => {
     document.getElementById('reciteMaterialInput').value = text;
     const badge = document.getElementById('reciteFileBadge');
-    if(badge){badge.style.display = 'inline-flex'; badge.className = 'file-badge'; badge.textContent = '📄 ' + file.name;}
+    badge.style.display = 'inline-flex'; badge.className = 'file-badge'; badge.textContent = '📄 ' + file.name;
   }).catch(err => { toast('文件解析失败：' + err.message, 'err'); });
 }
-(function(){
-  const rf=document.getElementById('reciteFileInput');
-  if(rf)rf.addEventListener('change', function() { if (this.files[0]) handleReciteFileRaw(this.files[0]); });
-})();
+document.getElementById('reciteFileInput').addEventListener('change', function() { if (this.files[0]) handleReciteFileRaw(this.files[0]); });
 async function handleFiles(input) { if (input.files.length) { await processFiles(Array.from(input.files)); input.value = ''; } }
 async function processFiles(files) {
   if (!files.length) return;
@@ -4219,11 +4211,7 @@ function deleteVocabHistory(idx) {
 }
 
 // ==================== INIT ====================
-try {
-  renderLib();
-} catch (e) {
-  document.body.insertAdjacentHTML('beforeend', '<div style="position:fixed;top:0;left:0;right:0;background:var(--red);color:#fff;padding:12px;z-index:9999;font-size:13px;">⚠️ 页面初始化错误: ' + e.message + '</div>');
-}
+renderLib();
 function escH(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 </script>
 </body>
