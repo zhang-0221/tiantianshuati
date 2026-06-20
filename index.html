@@ -1080,10 +1080,12 @@ updateKeyBtn();
 function openSettings() { document.getElementById('settingsModal').classList.remove('hidden'); document.getElementById('apiKeyInput').value = apiKey; }
 function closeSettings() { document.getElementById('settingsModal').classList.add('hidden'); }
 function saveApiKey() { apiKey = document.getElementById('apiKeyInput').value.trim(); localStorage.setItem(LS_KEY, apiKey); updateKeyBtn(); closeSettings(); toast(apiKey ? 'API Key 已保存' : 'API Key 已清除', 'ok'); }
-document.getElementById('settingsModal').addEventListener('click', function(e) { if (e === this) closeSettings(); });
-document.getElementById('editModal').addEventListener('click', function(e) { if (e === this) closeEditModal(); });
-document.getElementById('resumeModal').addEventListener('click', function(e) { if (e === this) closeResumeModal(); });
-document.getElementById('splitModal').addEventListener('click', function(e) { if (e === this) closeSplitModal(); });
+['settingsModal','editModal','resumeModal','splitModal'].forEach(id => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const fn = {settingsModal:closeSettings,editModal:closeEditModal,resumeModal:closeResumeModal,splitModal:closeSplitModal}[id];
+  el.addEventListener('click', function(e) { if (e.target === el) fn(); });
+});
 
 // ==================== LIBRARY ====================
 function loadLib() { try { library = JSON.parse(localStorage.getItem(LS_LIB) || '[]'); } catch { library = []; } }
@@ -1781,17 +1783,24 @@ document.getElementById('uploadZone').addEventListener('dragover', e => { e.prev
 document.getElementById('uploadZone').addEventListener('dragleave', e => e.currentTarget.classList.remove('dragover'));
 document.getElementById('uploadZone').addEventListener('drop', function(e) { e.preventDefault(); this.classList.remove('dragover'); if (e.dataTransfer.files.length) processFiles(Array.from(e.dataTransfer.files)); });
 // Recite import drag-drop
-document.getElementById('reciteUploadZone').addEventListener('dragover', e => { e.preventDefault(); e.currentTarget.classList.add('dragover'); });
-document.getElementById('reciteUploadZone').addEventListener('dragleave', e => e.currentTarget.classList.remove('dragover'));
-document.getElementById('reciteUploadZone').addEventListener('drop', function(e) { e.preventDefault(); this.classList.remove('dragover'); const f = e.dataTransfer.files[0]; if (f) handleReciteFileRaw(f); });
+(function(){
+  const rz=document.getElementById('reciteUploadZone');
+  if(!rz)return;
+  rz.addEventListener('dragover', e => { e.preventDefault(); e.currentTarget.classList.add('dragover'); });
+  rz.addEventListener('dragleave', e => e.currentTarget.classList.remove('dragover'));
+  rz.addEventListener('drop', function(e) { e.preventDefault(); this.classList.remove('dragover'); const f = e.dataTransfer.files[0]; if (f) handleReciteFileRaw(f); });
+})();
 function handleReciteFileRaw(file) {
   processReciteFileGetText(file).then(text => {
     document.getElementById('reciteMaterialInput').value = text;
     const badge = document.getElementById('reciteFileBadge');
-    badge.style.display = 'inline-flex'; badge.className = 'file-badge'; badge.textContent = '📄 ' + file.name;
+    if(badge){badge.style.display = 'inline-flex'; badge.className = 'file-badge'; badge.textContent = '📄 ' + file.name;}
   }).catch(err => { toast('文件解析失败：' + err.message, 'err'); });
 }
-document.getElementById('reciteFileInput').addEventListener('change', function() { if (this.files[0]) handleReciteFileRaw(this.files[0]); });
+(function(){
+  const rf=document.getElementById('reciteFileInput');
+  if(rf)rf.addEventListener('change', function() { if (this.files[0]) handleReciteFileRaw(this.files[0]); });
+})();
 async function handleFiles(input) { if (input.files.length) { await processFiles(Array.from(input.files)); input.value = ''; } }
 async function processFiles(files) {
   if (!files.length) return;
@@ -4210,7 +4219,11 @@ function deleteVocabHistory(idx) {
 }
 
 // ==================== INIT ====================
-renderLib();
+try {
+  renderLib();
+} catch (e) {
+  document.body.insertAdjacentHTML('beforeend', '<div style="position:fixed;top:0;left:0;right:0;background:var(--red);color:#fff;padding:12px;z-index:9999;font-size:13px;">⚠️ 页面初始化错误: ' + e.message + '</div>');
+}
 function escH(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 </script>
 </body>
