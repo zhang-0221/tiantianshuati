@@ -899,6 +899,10 @@ textarea::placeholder{color:var(--t3)}
       <label style="font-size:12px;font-weight:600;color:var(--t2);display:block;margin-bottom:4px;">拆分数量：<span id="splitCountLabel" style="color:var(--accent);">1 题</span></label>
       <input type="range" id="splitCount" min="1" max="1" value="1" oninput="updateSplitCount(this.value)" style="width:100%;accent-color:var(--accent);">
     </div>
+    <div style="margin-bottom:12px;" id="splitStartWrap">
+      <label style="font-size:12px;font-weight:600;color:var(--t2);display:block;margin-bottom:4px;">从第 <span id="splitStartLabel" style="color:var(--accent);">1</span> 题开始</label>
+      <input type="range" id="splitStart" min="1" max="1" value="1" oninput="updateSplitStart(this.value)" style="width:100%;accent-color:var(--accent);">
+    </div>
     <div style="margin-bottom:12px;">
       <label style="font-size:12px;font-weight:600;color:var(--t2);display:block;margin-bottom:6px;">拆分方式</label>
       <div style="display:flex;gap:8px;">
@@ -1222,10 +1226,14 @@ function openSplitModal(id) {
   if (!e || e.questions.length < 2) { toast('至少需要2道题才能拆分', 'err'); return; }
   splitExamId = id;
   splitMode = 'sequential';
-  const max = e.questions.length - 1;
+  const total = e.questions.length;
+  const max = total - 1;
   document.getElementById('splitCount').max = max;
   document.getElementById('splitCount').value = Math.min(Math.floor(max/2) || 1, max);
   document.getElementById('splitCountLabel').textContent = document.getElementById('splitCount').value + ' 题';
+  document.getElementById('splitStart').max = total;
+  document.getElementById('splitStart').value = 1;
+  document.getElementById('splitStartLabel').textContent = '1';
   document.getElementById('splitKeepOriginals').checked = true;
   updateSplitMode('sequential');
   document.getElementById('splitModal').classList.remove('hidden');
@@ -1239,11 +1247,15 @@ function closeSplitModal() {
 function updateSplitCount(val) {
   document.getElementById('splitCountLabel').textContent = val + ' 题';
 }
+function updateSplitStart(val) {
+  document.getElementById('splitStartLabel').textContent = val;
+}
 
 function updateSplitMode(mode) {
   splitMode = mode;
   const seqLabel = document.getElementById('splitModeSeqLabel');
   const randLabel = document.getElementById('splitModeRandLabel');
+  const startWrap = document.getElementById('splitStartWrap');
   if (mode === 'sequential') {
     seqLabel.style.borderColor = 'var(--accent)';
     seqLabel.style.background = 'var(--accent-l)';
@@ -1251,6 +1263,7 @@ function updateSplitMode(mode) {
     randLabel.style.borderColor = 'var(--border)';
     randLabel.style.background = '';
     randLabel.style.color = '';
+    if (startWrap) startWrap.style.display = '';
   } else {
     randLabel.style.borderColor = 'var(--accent)';
     randLabel.style.background = 'var(--accent-l)';
@@ -1258,6 +1271,7 @@ function updateSplitMode(mode) {
     seqLabel.style.borderColor = 'var(--border)';
     seqLabel.style.background = '';
     seqLabel.style.color = '';
+    if (startWrap) startWrap.style.display = 'none';
   }
 }
 
@@ -1272,8 +1286,9 @@ function doSplit() {
   // Select question indices based on mode
   let selectedIndices = [];
   if (splitMode === 'sequential') {
-    // First N questions
-    for (let i = 0; i < count; i++) selectedIndices.push(i);
+    // From start position, take N questions
+    const start = parseInt(document.getElementById('splitStart').value) - 1;
+    for (let i = start; i < Math.min(start + count, e.questions.length); i++) selectedIndices.push(i);
   } else {
     // Random selection
     const pool = e.questions.map((_, i) => i);
@@ -2316,7 +2331,7 @@ function renderQuizTab() {
       <div id="cutBtnArea" style="text-align:center;margin-top:10px;display:none;"></div>
     </div>
     <div style="text-align:center;margin-top:8px;">
-      <button class="btn btn-p btn-sm" id="finishBtn" onclick="showResults()" style="display:none;">提交试卷</button>
+      <button class="btn btn-p btn-sm" id="finishBtn" onclick="submitExam()">📝 提交试卷</button>
     </div>`;
   renderTypeTabs();
   renderExam(); updateProgress();
@@ -2370,7 +2385,6 @@ function renderExam() {
   }
   document.getElementById('prevBtn').disabled = currentIndex === 0;
   document.getElementById('nextBtn').disabled = currentIndex >= filteredQuestions.length - 1;
-  document.getElementById('finishBtn').style.display = activeExam.questions.every(q => activeExam.isSubmitted[q.id]) ? '' : 'none';
   // Show 斩题 button in wrong-review mode
   const cutArea = document.getElementById('cutBtnArea');
   if (cutArea && activeExam.reviewMode === 'wrong') {
@@ -2538,7 +2552,7 @@ function clickTf(i) {
 
 // ==================== HELPERS ====================
 function expBox(q) { return q.explanation ? `<div class="exp-box show"><div class="exp-label">解析</div>${escH(q.explanation).replace(/\n/g,'<br>')}</div>` : ''; }
-function checkFinish() { const fb = document.getElementById('finishBtn'); if (fb) fb.style.display = activeExam.questions.every(q => activeExam.isSubmitted[q.id]) ? '' : 'none'; }
+function checkFinish() { /* finish button always visible now */ }
 function updateProgress() {
   if (!activeExam) return;
   const t = activeExam.questions.length;
@@ -2584,30 +2598,44 @@ document.addEventListener('keydown', function(e) {
 });
 
 // ==================== RESULTS ====================
+function submitExam() {
+  if (!activeExam) return;
+  const done = Object.keys(activeExam.isSubmitted).length;
+  const total = activeExam.questions.length;
+  if (done === 0) { toast('请至少答一题再提交', 'err'); return; }
+  if (done < total) {
+    if (!confirm('还有 ' + (total - done) + ' 题未答，确定提交吗？\n未答的题目将不参与计分。')) return;
+  }
+  showResults();
+}
+
 function showResults() {
   if (!activeExam) return;
   activeExam.reviewMode = null;
   const t = activeExam.questions.length;
+  const done = Object.keys(activeExam.isSubmitted).length;
+  const c = Object.values(activeExam.isCorrect).filter(v => v === true).length;
   const w = Object.values(activeExam.isCorrect).filter(v => v === false).length;
   const cut = Object.values(activeExam.cutWrong || {}).filter(v => v === true).length;
   const wRemain = w - cut;
-  const c = t - w;
-  const rate = t ? Math.round(c / t * 100) : 0;
+  const unanswered = t - done;
+  const rate = done ? Math.round(c / done * 100) : 0;
 
   document.getElementById('quizView').innerHTML = `
     <div class="quiz-header-bar">
       <button class="btn btn-s btn-sm" onclick="backToLib()">← 返回题库</button>
     </div>
     <div class="card" style="text-align:center;">
-      <div style="font-size:13px;color:var(--t3);">考试完成</div>
+      <div style="font-size:13px;color:var(--t3);">${done === t ? '考试完成' : '已提交（部分完成）'}</div>
       <div class="big-score">${rate}%</div>
       <div style="font-size:13px;color:var(--t3);margin-bottom:16px;">${rate>=90?'太优秀了！':rate>=70?'不错，继续加油！':rate>=50?'还需要多复习。':'基础较薄弱，重新梳理吧。'}</div>
       <div class="result-grid">
         <div class="res-item"><div class="big">${t}</div><div class="lbl">总题</div></div>
         <div class="res-item"><div class="big" style="color:var(--green);">${c}</div><div class="lbl">正确</div></div>
-        <div class="res-item"><div class="big" style="color:var(--red);">${wRemain}</div><div class="lbl">剩余错题</div></div>
+        <div class="res-item"><div class="big" style="color:var(--red);">${wRemain > 0 ? wRemain : 0}</div><div class="lbl">剩余错题</div></div>
         <div class="res-item"><div class="big" style="color:var(--accent);">${rate}%</div><div class="lbl">正确率</div></div>
       </div>
+      ${unanswered > 0 ? `<div style="font-size:12px;color:var(--amber);margin-bottom:8px;">⚠️ ${unanswered} 题未答，不参与计分</div>` : ''}
       ${cut > 0 ? `<div style="font-size:11px;color:var(--t3);margin-bottom:12px;">已斩 ${cut} 道错题</div>` : ''}
       <div class="act-row">
         <button class="btn btn-s btn-sm" onclick="reviewWrong()">${wRemain > 0 ? '错题回顾 · ' + wRemain : '错题回顾'}</button>
