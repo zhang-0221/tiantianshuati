@@ -1128,6 +1128,9 @@ function saveExam(name) {
 }
 
 function deleteExam(id) {
+  const e = library.find(x => x.id === id);
+  if (!e) return;
+  if (!confirm('确定删除「' + e.name + '」吗？\n此操作不可恢复。')) return;
   library = library.filter(e => e.id !== id); saveLib(); renderLib();
   toast('试卷已删除');
   if (activeExam && activeExam.id === id) { activeExam = null; showLibView(); }
