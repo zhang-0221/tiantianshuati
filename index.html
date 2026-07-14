@@ -1213,7 +1213,7 @@ textarea:focus{border-color:#8db4ff;box-shadow:0 0 0 4px rgba(37,99,235,.09);}
 </div>
 
 <!-- Sync Modal -->
-<div class="modal-overlay hidden" id="migrationModal" role="dialog" aria-modal="true" aria-labelledby="migrationModalTitle">
+<div class="modal-overlay hidden" id="migrationModal" role="dialog" aria-modal="true" aria-labelledby="migrationModalTitle" style="z-index:3100;">
   <div class="modal" style="max-width:440px;">
     <h3 id="migrationModalTitle">同步学习数据</h3>
     <p id="migrationModalDesc" style="font-size:13px;color:var(--t2);margin:8px 0 16px;line-height:1.7;"></p>
@@ -1290,6 +1290,7 @@ textarea:focus{border-color:#8db4ff;box-shadow:0 0 0 4px rgba(37,99,235,.09);}
 const LS_KEY = 'ttsk_ds_key', LS_LIB = 'ttsk_library', LS_PROGRESS = 'ttsk_progress';
 const LS_AUTH_SESSION = 'ttsk_auth_session';
 const LS_LEARNING_SETTINGS = 'ttsk_learning_settings';
+const LS_MIGRATION_BUFFER = 'ttsk_pending_migration';
 const CLOUD_SYNC_DELAY = 900;
 const AUTH_CONFIG = window.TTSK_AUTH_CONFIG || null;
 const AUTH_GATE_ENABLED = Boolean(AUTH_CONFIG?.enableGate === true);
@@ -1328,6 +1329,8 @@ let cloudSyncInFlight = false;
 let cloudSyncQueued = false;
 let cloudSyncInitializedFor = null;
 let cloudSyncMigrationResolved = false;
+let cloudSyncMigrationPending = false;
+let cloudSyncAwaitingInitialCreate = false;
 let migrationContext = null;
 
 // Recite state
@@ -1441,7 +1444,12 @@ function applyAuthenticatedSession(session, user, fallbackUsername) {
   const username = usernameForUser(user, fallbackUsername);
   saveAuthSession(session, username);
   renderAccountMenu(user, username);
-  setAuthGateActive(false);
+  beginInitialMigration();
+}
+
+function beginInitialMigration() {
+  setAuthGateActive(true);
+  setAuthStatus('正在准备账号学习数据…');
   void resolveInitialMigration().catch(() => setSyncStatus('同步暂不可用'));
 }
 
@@ -1452,6 +1460,8 @@ function clearAuthenticatedSession() {
   cloudSyncTimer = null;
   cloudSyncQueued = false;
   cloudSyncMigrationResolved = false;
+  cloudSyncMigrationPending = false;
+  cloudSyncAwaitingInitialCreate = false;
   migrationContext = null;
   document.getElementById('migrationModal')?.classList.add('hidden');
   localStorage.removeItem(LS_AUTH_SESSION);
@@ -4725,6 +4735,20 @@ function normalizeLearningSnapshot(snapshot) {
   };
 }
 
+function getPendingMigrationSnapshot(userId) {
+  const buffer = readStoredJSON(LS_MIGRATION_BUFFER, null);
+  return buffer?.userId === userId ? normalizeLearningSnapshot(buffer.snapshot) : null;
+}
+
+function savePendingMigrationSnapshot(userId, snapshot) {
+  localStorage.setItem(LS_MIGRATION_BUFFER, JSON.stringify({ userId, snapshot: normalizeLearningSnapshot(snapshot) }));
+}
+
+function clearPendingMigrationSnapshot(userId) {
+  const buffer = readStoredJSON(LS_MIGRATION_BUFFER, null);
+  if (!buffer || buffer.userId === userId) localStorage.removeItem(LS_MIGRATION_BUFFER);
+}
+
 function applyLearningSnapshot(snapshot) {
   const next = normalizeLearningSnapshot(snapshot);
   library = next.library;
@@ -4829,12 +4853,37 @@ function openMigrationModal(mode, cloudSnapshot, localSnapshot) {
     mergeBtn.style.display = '';
     uploadBtn.textContent = '上传本机数据';
   }
+  modal.inert = false;
+  modal.removeAttribute('aria-hidden');
   modal.classList.remove('hidden');
 }
 
 function closeMigrationModal() {
-  document.getElementById('migrationModal').classList.add('hidden');
+  const modal = document.getElementById('migrationModal');
+  modal.classList.add('hidden');
+  modal.inert = true;
+  modal.setAttribute('aria-hidden', 'true');
   migrationContext = null;
+}
+
+function finishInitialMigration() {
+  cloudSyncMigrationResolved = true;
+  cloudSyncMigrationPending = false;
+  cloudSyncAwaitingInitialCreate = false;
+  clearPendingMigrationSnapshot(authenticatedUser?.id);
+  closeMigrationModal();
+  setAuthStatus('');
+  setAuthGateActive(false);
+}
+
+function provisionEmptyAccountSnapshot() {
+  cloudSyncMigrationResolved = true;
+  cloudSyncMigrationPending = false;
+  cloudSyncAwaitingInitialCreate = true;
+  clearPendingMigrationSnapshot(authenticatedUser?.id);
+  closeMigrationModal();
+  setSyncStatus('正在创建云端学习空间…');
+  queueCloudSync(0);
 }
 
 function decideInitialMigration(action) {
@@ -4843,26 +4892,21 @@ function decideInitialMigration(action) {
   if (action === 'cloud') {
     applyLearningSnapshot(context.cloudSnapshot);
     setSyncStatus('已从云端恢复');
+    finishInitialMigration();
   } else if (action === 'merge') {
     applyLearningSnapshot(mergeLearningSnapshots(context.cloudSnapshot, context.localSnapshot));
-    cloudSyncMigrationResolved = true;
-    closeMigrationModal();
+    finishInitialMigration();
     queueCloudSync(0);
-    return;
   } else if (action === 'upload') {
     applyLearningSnapshot(context.localSnapshot);
-    cloudSyncMigrationResolved = true;
-    closeMigrationModal();
+    finishInitialMigration();
     queueCloudSync(0);
-    return;
   } else if (action === 'fresh') {
     clearLearningCache();
-    setSyncStatus('同步就绪');
+    provisionEmptyAccountSnapshot();
   } else {
     return;
   }
-  cloudSyncMigrationResolved = true;
-  closeMigrationModal();
 }
 
 function queueCloudSync(delay = CLOUD_SYNC_DELAY) {
@@ -4892,6 +4936,11 @@ async function flushCloudSync() {
     return false;
   }
   setSyncStatus('已同步');
+  if (cloudSyncAwaitingInitialCreate) {
+    cloudSyncAwaitingInitialCreate = false;
+    setAuthStatus('');
+    setAuthGateActive(false);
+  }
   if (cloudSyncQueued) queueCloudSync();
   return true;
 }
@@ -4907,6 +4956,10 @@ async function resolveInitialMigration() {
   if (!userId || !client || cloudSyncInitializedFor === userId) return;
   cloudSyncInitializedFor = userId;
   cloudSyncMigrationResolved = false;
+  cloudSyncMigrationPending = true;
+  const localSnapshot = getPendingMigrationSnapshot(userId) || buildLearningSnapshot();
+  savePendingMigrationSnapshot(userId, localSnapshot);
+  clearLearningCache();
   setSyncStatus('检查云端学习数据…');
   const { data, error } = await client.from('learning_snapshots')
     .select('library, progress, vocab_history, settings')
@@ -4915,11 +4968,12 @@ async function resolveInitialMigration() {
   if (authenticatedUser?.id !== userId || cloudSyncInitializedFor !== userId) return;
   if (error) {
     cloudSyncInitializedFor = null;
+    cloudSyncMigrationPending = true;
+    setAuthStatus('网络不可用，恢复网络后会继续准备学习数据。');
     setSyncStatus('同步暂不可用');
     return;
   }
 
-  const localSnapshot = buildLearningSnapshot();
   const cloudSnapshot = normalizeLearningSnapshot(data);
   const hasCloudData = hasLearningData(cloudSnapshot);
   const hasLocalData = hasLearningData(localSnapshot);
@@ -4934,19 +4988,22 @@ async function resolveInitialMigration() {
   if (hasCloudData) {
     applyLearningSnapshot(cloudSnapshot);
     setSyncStatus('已从云端恢复');
+    finishInitialMigration();
   } else {
-    clearLearningCache();
-    setSyncStatus('同步就绪');
+    provisionEmptyAccountSnapshot();
   }
-  cloudSyncMigrationResolved = true;
 }
 
-window.addEventListener('online', () => { if (cloudSyncQueued) queueCloudSync(0); });
+window.addEventListener('online', () => {
+  if (cloudSyncMigrationPending) { void resolveInitialMigration(); return; }
+  if (cloudSyncQueued) queueCloudSync(0);
+});
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     void flushPendingSync();
     return;
   }
+  if (cloudSyncMigrationPending) { void resolveInitialMigration(); return; }
   if (cloudSyncQueued) queueCloudSync(0);
 });
 
