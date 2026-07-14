@@ -1213,6 +1213,19 @@ textarea:focus{border-color:#8db4ff;box-shadow:0 0 0 4px rgba(37,99,235,.09);}
 </div>
 
 <!-- Sync Modal -->
+<div class="modal-overlay hidden" id="migrationModal" role="dialog" aria-modal="true" aria-labelledby="migrationModalTitle">
+  <div class="modal" style="max-width:440px;">
+    <h3 id="migrationModalTitle">同步学习数据</h3>
+    <p id="migrationModalDesc" style="font-size:13px;color:var(--t2);margin:8px 0 16px;line-height:1.7;"></p>
+    <div class="modal-btns" style="justify-content:center;flex-wrap:wrap;">
+      <button class="btn btn-s btn-sm" id="migrationKeepCloudBtn" type="button" onclick="decideInitialMigration('cloud')">使用云端数据</button>
+      <button class="btn btn-s btn-sm" id="migrationMergeBtn" type="button" onclick="decideInitialMigration('merge')">合并本机题库</button>
+      <button class="btn btn-p btn-sm" id="migrationUploadBtn" type="button" onclick="decideInitialMigration('upload')">上传本机数据</button>
+    </div>
+  </div>
+</div>
+
+<!-- Sync Modal -->
 <div class="modal-overlay hidden" id="syncModal">
   <div class="modal" style="max-width:420px;">
     <h3>☁️ 跨设备同步</h3>
@@ -1314,6 +1327,8 @@ let cloudSyncTimer = null;
 let cloudSyncInFlight = false;
 let cloudSyncQueued = false;
 let cloudSyncInitializedFor = null;
+let cloudSyncMigrationResolved = false;
+let migrationContext = null;
 
 // Recite state
 let reciteExamId = null;
@@ -1436,6 +1451,9 @@ function clearAuthenticatedSession() {
   clearTimeout(cloudSyncTimer);
   cloudSyncTimer = null;
   cloudSyncQueued = false;
+  cloudSyncMigrationResolved = false;
+  migrationContext = null;
+  document.getElementById('migrationModal')?.classList.add('hidden');
   localStorage.removeItem(LS_AUTH_SESSION);
   renderAccountMenu(null);
 }
@@ -4680,7 +4698,8 @@ function readLearningProgress() {
 }
 
 function readLearningSettings() {
-  return readStoredJSON(LS_LEARNING_SETTINGS, {});
+  const settings = readStoredJSON(LS_LEARNING_SETTINGS, {});
+  return !Array.isArray(settings) ? settings : {};
 }
 
 function buildLearningSnapshot() {
@@ -4693,14 +4712,16 @@ function buildLearningSnapshot() {
 }
 
 function normalizeLearningSnapshot(snapshot) {
+  const progress = snapshot?.progress && typeof snapshot.progress === 'object' && !Array.isArray(snapshot?.progress)
+    ? snapshot.progress : {};
   return {
     library: Array.isArray(snapshot?.library) ? snapshot.library : [],
     progress: {
-      daily: snapshot?.progress?.daily && typeof snapshot.progress.daily === 'object' ? snapshot.progress.daily : {},
-      byType: snapshot?.progress?.byType && typeof snapshot.progress.byType === 'object' ? snapshot.progress.byType : {}
+      daily: progress.daily && typeof progress.daily === 'object' && !Array.isArray(snapshot?.progress?.daily) ? progress.daily : {},
+      byType: progress.byType && typeof progress.byType === 'object' && !Array.isArray(snapshot?.progress?.byType) ? progress.byType : {}
     },
     vocab_history: Array.isArray(snapshot?.vocab_history) ? snapshot.vocab_history : [],
-    settings: snapshot?.settings && typeof snapshot.settings === 'object' ? snapshot.settings : {}
+    settings: snapshot?.settings && typeof snapshot.settings === 'object' && !Array.isArray(snapshot?.settings) ? snapshot.settings : {}
   };
 }
 
@@ -4764,8 +4785,88 @@ function setSyncStatus(message) {
   if (status) status.textContent = authenticatedUser ? (message || '') : '';
 }
 
+function emptyLearningSnapshot() {
+  return { library: [], progress: { daily: {}, byType: {} }, vocab_history: [], settings: {} };
+}
+
+function clearLearningCache() {
+  applyLearningSnapshot(emptyLearningSnapshot());
+  activeExam = null;
+  filteredQuestions = [];
+  currentIndex = 0;
+  reciteExamId = null;
+  reciteQuestions = [];
+  reciteIndex = 0;
+  currentVocabWords = [];
+  currentVocabTranslation = '';
+  currentMindExamId = null;
+  currentNodePayload = null;
+  recordedAnswers.clear();
+}
+
+function openMigrationModal(mode, cloudSnapshot, localSnapshot) {
+  migrationContext = { mode, cloudSnapshot, localSnapshot };
+  const modal = document.getElementById('migrationModal');
+  const title = document.getElementById('migrationModalTitle');
+  const desc = document.getElementById('migrationModalDesc');
+  const cloudBtn = document.getElementById('migrationKeepCloudBtn');
+  const mergeBtn = document.getElementById('migrationMergeBtn');
+  const uploadBtn = document.getElementById('migrationUploadBtn');
+  if (mode === 'local') {
+    title.textContent = '迁移本机学习数据';
+    desc.textContent = '此设备有学习数据，当前账号尚无云端数据。请明确选择是否上传。';
+    cloudBtn.textContent = '不上传，清空本机数据';
+    cloudBtn.onclick = () => decideInitialMigration('fresh');
+    cloudBtn.style.display = '';
+    mergeBtn.style.display = 'none';
+    uploadBtn.textContent = '上传本机数据';
+  } else {
+    title.textContent = '选择学习数据';
+    desc.textContent = '当前账号和本机都有学习数据。请选择保留云端、合并题库，或用本机数据覆盖云端。';
+    cloudBtn.textContent = '使用云端数据';
+    cloudBtn.onclick = () => decideInitialMigration('cloud');
+    cloudBtn.style.display = '';
+    mergeBtn.style.display = '';
+    uploadBtn.textContent = '上传本机数据';
+  }
+  modal.classList.remove('hidden');
+}
+
+function closeMigrationModal() {
+  document.getElementById('migrationModal').classList.add('hidden');
+  migrationContext = null;
+}
+
+function decideInitialMigration(action) {
+  const context = migrationContext;
+  if (!context || !authenticatedUser?.id) return;
+  if (action === 'cloud') {
+    applyLearningSnapshot(context.cloudSnapshot);
+    setSyncStatus('已从云端恢复');
+  } else if (action === 'merge') {
+    applyLearningSnapshot(mergeLearningSnapshots(context.cloudSnapshot, context.localSnapshot));
+    cloudSyncMigrationResolved = true;
+    closeMigrationModal();
+    queueCloudSync(0);
+    return;
+  } else if (action === 'upload') {
+    applyLearningSnapshot(context.localSnapshot);
+    cloudSyncMigrationResolved = true;
+    closeMigrationModal();
+    queueCloudSync(0);
+    return;
+  } else if (action === 'fresh') {
+    clearLearningCache();
+    setSyncStatus('同步就绪');
+  } else {
+    return;
+  }
+  cloudSyncMigrationResolved = true;
+  closeMigrationModal();
+}
+
 function queueCloudSync(delay = CLOUD_SYNC_DELAY) {
-  if (!authenticatedUser?.id || !getAuthClient()) return;
+  if (!authenticatedUser?.id || !cloudSyncMigrationResolved || !getAuthClient()) return;
   cloudSyncQueued = true;
   clearTimeout(cloudSyncTimer);
   setSyncStatus(navigator.onLine ? '等待同步…' : '离线，等待同步');
@@ -4773,7 +4874,7 @@ function queueCloudSync(delay = CLOUD_SYNC_DELAY) {
 }
 
 async function flushCloudSync() {
-  if (!cloudSyncQueued || cloudSyncInFlight || !authenticatedUser?.id || !navigator.onLine) return false;
+  if (!cloudSyncQueued || cloudSyncInFlight || !authenticatedUser?.id || !cloudSyncMigrationResolved || !navigator.onLine) return false;
   const client = getAuthClient();
   if (!client) return false;
   cloudSyncInFlight = true;
@@ -4805,11 +4906,13 @@ async function resolveInitialMigration() {
   const client = getAuthClient();
   if (!userId || !client || cloudSyncInitializedFor === userId) return;
   cloudSyncInitializedFor = userId;
+  cloudSyncMigrationResolved = false;
   setSyncStatus('检查云端学习数据…');
   const { data, error } = await client.from('learning_snapshots')
     .select('library, progress, vocab_history, settings')
     .eq('user_id', userId)
     .maybeSingle();
+  if (authenticatedUser?.id !== userId || cloudSyncInitializedFor !== userId) return;
   if (error) {
     cloudSyncInitializedFor = null;
     setSyncStatus('同步暂不可用');
@@ -4821,35 +4924,30 @@ async function resolveInitialMigration() {
   const hasCloudData = hasLearningData(cloudSnapshot);
   const hasLocalData = hasLearningData(localSnapshot);
   if (!hasCloudData && hasLocalData) {
-    if (window.confirm('检测到本机学习数据，是否上传到当前账号？')) {
-      queueCloudSync(0);
-    } else {
-      setSyncStatus('本机数据未上传');
-    }
+    openMigrationModal('local', cloudSnapshot, localSnapshot);
     return;
   }
   if (hasCloudData && hasLocalData) {
-    if (window.confirm('云端和本机都有学习数据。确定合并题库，取消则使用云端数据？')) {
-      applyLearningSnapshot(mergeLearningSnapshots(cloudSnapshot, localSnapshot));
-      queueCloudSync(0);
-    } else {
-      applyLearningSnapshot(cloudSnapshot);
-      setSyncStatus('已从云端恢复');
-    }
+    openMigrationModal('both', cloudSnapshot, localSnapshot);
     return;
   }
   if (hasCloudData) {
     applyLearningSnapshot(cloudSnapshot);
     setSyncStatus('已从云端恢复');
   } else {
-    queueCloudSync(0);
-    setSyncStatus('已同步');
+    clearLearningCache();
+    setSyncStatus('同步就绪');
   }
+  cloudSyncMigrationResolved = true;
 }
 
 window.addEventListener('online', () => { if (cloudSyncQueued) queueCloudSync(0); });
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden && (cloudSyncQueued || authenticatedUser)) queueCloudSync(0);
+  if (document.hidden) {
+    void flushPendingSync();
+    return;
+  }
+  if (cloudSyncQueued) queueCloudSync(0);
 });
 
 async function generateVocabStory() {
