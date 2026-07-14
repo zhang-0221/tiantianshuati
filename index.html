@@ -835,12 +835,14 @@ textarea:focus{border-color:#8db4ff;box-shadow:0 0 0 4px rgba(37,99,235,.09);}
 @media(max-width:640px){.workspace-shell{display:block;padding:0;}.sidebar{border-radius:0;height:100vh;box-shadow:5px 0 28px rgba(16,32,57,.28);}.app-main{min-height:100vh;border:0;border-radius:0;box-shadow:none;}.hamburger{border-radius:12px;}.chat-toggle{bottom:28px;}.chat-panel.open ~ .chat-toggle{bottom:28px;}.study-page-head{display:block;}.study-page-head .btn{margin-top:15px;width:100%;}.study-page-title{font-size:26px;}.study-page-stats{gap:8px;}.study-stat{padding:13px 10px;}.study-stat b{font-size:20px;}.generation-controls{flex-direction:column;align-items:stretch!important;}.generation-controls .btn{width:100%;}.generation-controls label{padding:3px 0;}.gen-feedback{width:100%;margin-top:10px;}.gen-feedback-retry{margin-left:0;}}
 
 /* Account gate: a quiet landscape welcome before the learning workspace. */
-.auth-gate{position:fixed;inset:0;z-index:1000;display:flex;align-items:flex-end;justify-content:flex-end;padding:clamp(24px,5vw,78px);overflow:auto;background:#f8c6a8 url('assets/login-landscape.png') center/cover no-repeat;}
+.auth-gate{position:fixed;inset:0;z-index:1200;display:flex;align-items:flex-end;justify-content:flex-end;padding:clamp(24px,5vw,78px);overflow:auto;background:#f8c6a8 url('assets/login-landscape.webp') center/cover no-repeat;}
+.auth-gate[hidden]{display:none;}
 .auth-gate::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,247,239,.14) 0%,rgba(255,247,239,.03) 48%,rgba(33,31,33,.22) 100%),linear-gradient(0deg,rgba(255,255,255,.62) 0%,rgba(255,255,255,0) 49%);pointer-events:none;}
 .auth-brand{position:absolute;z-index:1;top:clamp(22px,3vw,42px);left:clamp(24px,4vw,58px);display:flex;align-items:center;gap:10px;color:#162b4b;font-size:18px;font-weight:800;letter-spacing:.08em;text-shadow:0 1px 0 rgba(255,255,255,.5);}
 .auth-brand-mark{display:grid;place-items:center;width:32px;height:32px;border:1px solid rgba(22,43,75,.2);border-radius:11px;background:rgba(255,255,255,.54);font-size:17px;box-shadow:0 8px 22px rgba(65,68,71,.09);}
 .auth-card{position:relative;z-index:1;width:min(100%,410px);padding:30px;border:1px solid rgba(255,255,255,.72);border-radius:24px;background:rgba(255,255,255,.74);box-shadow:0 22px 60px rgba(59,54,47,.18),inset 0 1px 0 rgba(255,255,255,.72);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);}
 .auth-kicker{margin-bottom:5px;color:#2563eb;font-size:11px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;}
+.auth-card > h1{margin:0 0 5px;color:#31598e;font-size:13px;line-height:1.35;font-weight:800;letter-spacing:.03em;}
 .auth-card h2{margin:0;color:#15284a;font-size:28px;line-height:1.2;letter-spacing:-.04em;}
 .auth-copy{margin:8px 0 22px;color:#64748b;font-size:13px;line-height:1.7;}
 .auth-form{display:none;}.auth-form.active{display:block;}
@@ -858,14 +860,15 @@ textarea:focus{border-color:#8db4ff;box-shadow:0 0 0 4px rgba(37,99,235,.09);}
 <body>
 
 <!-- Account gate: forms are intentionally static until the session layer is wired. -->
-<section class="auth-gate" id="authGate" aria-labelledby="authGateTitle">
+<section class="auth-gate" id="authGate" aria-labelledby="authGateTitle" hidden>
   <div class="auth-brand" aria-label="喜刷刷">
     <span class="auth-brand-mark" aria-hidden="true">✦</span><span>喜刷刷</span>
   </div>
   <div class="auth-card">
     <p class="auth-kicker">YOUR LEARNING SPACE</p>
+    <h1 id="authGateTitle">喜刷刷账号</h1>
     <form class="auth-form active" id="loginForm" onsubmit="return handleAuthGateSubmit(event)">
-      <h2 id="authGateTitle">欢迎回来</h2>
+      <h2>欢迎回来</h2>
       <p class="auth-copy">登录后继续管理你的题库与学习进度。</p>
       <label class="auth-field" for="loginUsername">用户名
         <input id="loginUsername" name="username" type="text" autocomplete="username" placeholder="输入用户名" required>
@@ -881,7 +884,7 @@ textarea:focus{border-color:#8db4ff;box-shadow:0 0 0 4px rgba(37,99,235,.09);}
     </form>
     <form class="auth-form" id="registerForm" onsubmit="return handleAuthGateSubmit(event)">
       <h2>创建账号</h2>
-      <p class="auth-copy">注册后，学习资料和进度将与账号关联。</p>
+      <p class="auth-copy">账号服务配置完成后，学习资料和进度可与账号关联。</p>
       <label class="auth-field" for="registerUsername">用户名
         <input id="registerUsername" name="username" type="text" autocomplete="username" placeholder="3–24 位字母、数字或下划线" required>
       </label>
@@ -904,7 +907,7 @@ textarea:focus{border-color:#8db4ff;box-shadow:0 0 0 4px rgba(37,99,235,.09);}
       <div class="auth-links"><button class="auth-link" type="button" onclick="setAuthView('login')">返回登录</button></div>
     </form>
     <p class="auth-status" id="authStatus" role="status" aria-live="polite"></p>
-    <p class="auth-privacy">你的学习数据将按账号隔离保存；DeepSeek API Key 始终只保存在当前设备。</p>
+    <p class="auth-privacy">账号服务配置完成后才会启用同步；DeepSeek API Key 始终只保存在当前设备。</p>
   </div>
 </section>
 
@@ -1266,6 +1269,7 @@ textarea:focus{border-color:#8db4ff;box-shadow:0 0 0 4px rgba(37,99,235,.09);}
 // ==================== STATE ====================
 const LS_KEY = 'ttsk_ds_key', LS_LIB = 'ttsk_library', LS_PROGRESS = 'ttsk_progress';
 const AUTH_CONFIG = window.TTSK_AUTH_CONFIG || null;
+const AUTH_GATE_ENABLED = Boolean(AUTH_CONFIG?.enableGate === true);
 const MAMMOTH_CDNS = [
   'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js',
   'https://unpkg.com/mammoth@1.8.0/mammoth.browser.min.js',
@@ -1304,6 +1308,23 @@ let vocabHistory = [];
 const LS_VOCAB = 'ttsk_vocab_history';
 let currentVocabWords = [];
 let currentVocabTranslation = '';
+
+function setAuthGateActive(active) {
+  const gate = document.getElementById('authGate');
+  const workspace = document.querySelector('.workspace-shell');
+  gate.hidden = !active;
+  workspace.inert = active;
+  workspace.setAttribute('aria-hidden', String(active));
+  Array.from(document.body.children)
+    .filter(element => element !== gate && element.tagName !== 'SCRIPT')
+    .forEach(element => {
+      element.inert = active;
+      element.setAttribute('aria-hidden', String(active));
+    });
+}
+
+// Until browser sessions are implemented, only an explicit public config may show the gate.
+setAuthGateActive(AUTH_GATE_ENABLED);
 
 // ==================== TOAST ====================
 function toast(msg, type) {
