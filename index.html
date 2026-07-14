@@ -699,11 +699,98 @@ textarea::placeholder{color:var(--t3)}
   .answer-sheet-item{width:34px;height:34px;font-size:13px}
   .answer-sheet-grid{gap:8px}
 }
+/* ==================== WORKSPACE REDESIGN ==================== */
+:root{
+  --canvas-dot:#dce4f2;
+  --canvas:#f8fafc;
+  --ink:#13213d;
+  --muted:#72809a;
+  --panel:#ffffff;
+  --line:#e6ebf3;
+  --blue:#2563eb;
+  --blue-soft:#edf3ff;
+  --blue-wash:#dce9ff;
+  --workspace-shadow:0 18px 44px rgba(35,55,91,.08);
+}
+body{
+  color:var(--ink);
+  background-color:var(--canvas);
+  background-image:radial-gradient(var(--canvas-dot) .8px,transparent .8px);
+  background-size:14px 14px;
+}
+.workspace-shell{
+  max-width:1280px;min-height:calc(100vh - 36px);margin:18px auto;
+  overflow:hidden;border:1px solid #d7dfed;border-radius:18px;
+  background:rgba(255,255,255,.82);box-shadow:0 18px 42px rgba(45,64,96,.07);
+}
+.workspace-shell::before{content:'';position:fixed;top:18px;left:max(calc(50% - 640px),18px);right:max(calc(50% - 640px),18px);height:2px;background:linear-gradient(90deg,#8ab3ff,#d8e7ff,#8ab3ff);z-index:101;pointer-events:none;}
+.sidebar{width:104px;padding:22px 10px 14px;background:#f4f7ff;border-right:1px solid #e1e7f3;align-items:center;}
+.sidebar-brand{width:100%;padding:0 4px 18px;margin-bottom:12px;border-bottom:0;text-align:center;}
+.sidebar-brand h1{font-size:14px;line-height:1.2;color:var(--blue);letter-spacing:.06em;}
+.sidebar-brand h1::before{content:'◈';display:block;width:42px;height:42px;margin:0 auto 7px;border-radius:15px;background:var(--blue);color:#fff;font-size:23px;line-height:42px;box-shadow:0 8px 18px rgba(37,99,235,.22);}
+.sidebar-nav{width:100%;padding:0;gap:8px;align-items:center;}
+.sidebar-item{width:76px;min-height:62px;padding:8px 4px;gap:3px;flex-direction:column;justify-content:center;border-radius:12px;font-size:11px;font-weight:600;color:#79849a;line-height:1.2;text-align:center;}
+.sidebar-item .si-icon{font-size:18px;line-height:1;filter:grayscale(.25);}
+.sidebar-item:hover{background:#e8f0ff;color:var(--blue);}
+.sidebar-item.active{background:#dfeaff;color:var(--blue);box-shadow:inset -2px 0 0 var(--blue);}
+.sidebar-item.active .si-icon{filter:none;}
+.sidebar-bottom{width:100%;padding:12px 0 0;border-top:1px solid #e1e7f3;}
+.sidebar-bottom .sidebar-item{width:100%;min-height:auto;padding:8px 3px;flex-direction:row;justify-content:flex-start;font-size:10px;}
+.sidebar-key-tag{font-size:9px;padding:2px 5px;margin-left:auto;}
+.app-main{padding:32px 40px 46px;background:rgba(252,253,255,.65);}
+.card{border:1px solid var(--line);border-radius:16px;padding:22px;background:var(--panel);box-shadow:0 8px 24px rgba(37,55,88,.035);}
+.card-hd{font-size:15px;color:var(--ink);letter-spacing:-.01em;}
+.btn{border-radius:9px;font-weight:700;letter-spacing:.01em;}
+.btn-p{width:auto;background:var(--blue);box-shadow:0 7px 14px rgba(37,99,235,.18);}
+.btn-p:hover{background:#174fc8;transform:translateY(-1px);}
+.btn-s{border-color:#dbe3f0;background:#fff;color:#4a5b75;}
+.btn-s:hover{border-color:#a8c4fb;background:var(--blue-soft);color:var(--blue);}
+textarea{border-color:#dfe6f0;background:#fbfcff;border-radius:11px;color:var(--ink);}
+textarea:focus{border-color:#8db4ff;box-shadow:0 0 0 4px rgba(37,99,235,.09);}
+.upload-zone{border-color:#d5dfef;border-radius:13px;padding:34px 22px;background:linear-gradient(135deg,#fff 0%,#fafcff 100%);}
+.upload-zone:hover,.upload-zone.dragover{border-color:#7ca9ff;background:#f2f6ff;}
+.upload-zone .up-icon{font-size:30px;}
+.upload-zone .up-text{font-size:14px;font-weight:700;color:var(--ink);}
+.upload-zone .up-hint{font-size:12px;margin-top:5px;color:var(--muted);}
+.divider{color:#91a0b6;}.divider::before,.divider::after{background:#e5eaf2;}
+.lib-item{padding:16px 17px;border-color:var(--line);border-radius:13px;box-shadow:none;}
+.lib-item:hover{border-color:#a9c4f7;box-shadow:0 10px 18px rgba(37,99,235,.07);transform:translateY(-1px);}
+.lib-name{color:var(--ink);}.lib-meta{color:var(--muted);}
+.empty-state{padding:42px 16px;color:var(--muted);}
+.type-tab{border-color:#dfe6f0;background:#fff;color:#6d7b91;}.type-tab.active{background:var(--blue);border-color:var(--blue);}
+.opt{border-color:#dde5f0;border-radius:11px;}.opt:hover{border-color:#91b5ff;background:#f1f6ff;}
+.quiz-header-bar{padding:12px 0 16px;margin-bottom:12px;border-bottom:1px solid var(--line);}
+.exam-hd{border-color:var(--line);}.q-text{font-size:17px;color:var(--ink);}
+
+/* Dashboard import view */
+.workspace-welcome{display:flex;align-items:flex-start;justify-content:space-between;gap:22px;margin:4px 0 26px;}
+.workspace-welcome h2{margin:0;color:#10213e;font-size:31px;line-height:1.15;letter-spacing:-.06em;}
+.workspace-welcome p{margin:8px 0 0;color:var(--muted);font-size:13px;}
+.welcome-mark{display:flex;gap:0;overflow:hidden;border:1px solid var(--line);border-radius:14px;background:#fff;box-shadow:0 8px 20px rgba(37,55,88,.04);}
+.welcome-mark span{min-width:72px;padding:12px 10px;text-align:center;border-right:1px solid #edf0f5;font-size:11px;color:var(--muted);line-height:1.35;}
+.welcome-mark span:last-child{border:0;}.welcome-mark b{display:block;font-size:19px;color:var(--blue);}.welcome-mark span:nth-child(2) b{color:#12805c;}.welcome-mark span:nth-child(3) b{color:#e87312;}
+.import-dashboard{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:24px;align-items:start;}
+.import-card{margin:0;min-height:410px;}
+.import-card .card-hd{font-size:17px;margin-bottom:18px;}.import-card .card-hd::before{content:'+';display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;margin-right:7px;border-radius:50%;background:var(--blue);color:#fff;font-size:16px;line-height:1;}
+.import-card .upload-zone{margin-bottom:14px;}.import-card textarea{min-height:110px;}.import-card > div[style*="display:flex"]{padding-top:4px;}
+.import-card .toggle-wrap{padding:6px 8px;border-radius:9px;background:#f7f9fd;transition:background .15s;}.import-card .toggle-wrap:hover{background:#eef4ff;}
+.import-card #genBtn{margin-left:auto;}
+.dashboard-rail{display:flex;flex-direction:column;gap:18px;}
+.rail-card{border:1px solid var(--line);border-radius:16px;padding:18px 18px 17px;background:rgba(255,255,255,.96);box-shadow:0 8px 23px rgba(37,55,88,.04);}
+.rail-card h3{display:flex;align-items:center;gap:9px;margin:0 0 10px;font-size:14px;color:var(--ink);}.rail-card h3 i{display:inline-flex;align-items:center;justify-content:center;width:29px;height:29px;border-radius:50%;background:#e5efff;color:var(--blue);font-style:normal;font-size:15px;}
+.rail-card p{margin:0;color:#566681;font-size:13px;line-height:1.75;}.rail-card small{display:block;margin-top:8px;color:#8d9ab0;font-size:11px;}
+.rail-goals h3{margin-bottom:16px;}.rail-goal{margin-top:13px;}.rail-goal:first-of-type{margin-top:0;}.rail-goal-head{display:flex;justify-content:space-between;margin-bottom:6px;font-size:12px;color:#52627c;}.rail-goal-head b{color:var(--ink);}.rail-meter{height:6px;overflow:hidden;border-radius:99px;background:#edf0f5;}.rail-meter span{display:block;height:100%;border-radius:inherit;background:var(--blue);}.rail-goal:nth-of-type(2) .rail-meter span{background:#0b8b67;}
+.rail-note{overflow:hidden;padding:0;}.rail-note-visual{height:86px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#cce0ff,#b7d2fb);color:#4e87d9;font-size:31px;}.rail-note-body{padding:18px;}.rail-note a{display:inline-flex;margin-top:14px;color:var(--blue);font-size:12px;font-weight:700;text-decoration:none;}
+
+@media(min-width:961px){.workspace-shell{border-left:1px solid #d7dfed;border-right:1px solid #d7dfed;min-height:calc(100vh - 36px);}.workspace-shell .sidebar{height:calc(100vh - 36px);}}
+@media(max-width:980px){.workspace-shell{margin:0;border-radius:0;border-left:0;border-right:0;min-height:100vh;}.workspace-shell::before{left:0;right:0;top:0;}.app-main{padding:28px 26px;}.import-dashboard{grid-template-columns:1fr;}.dashboard-rail{display:grid;grid-template-columns:repeat(3,1fr);}.rail-card{height:100%;}.rail-note{display:none;}}
+@media(max-width:768px){.sidebar{width:82px}.sidebar-item{width:62px;font-size:10px}.sidebar-brand h1{font-size:11px}.app-main{padding:24px 20px}.workspace-welcome h2{font-size:26px}.welcome-mark span{min-width:62px;}.dashboard-rail{grid-template-columns:1fr 1fr;}.rail-note{display:block;}.rail-note-visual{height:66px;}.import-card #genBtn{margin-left:0;}.workspace-shell::before{display:none;}}
+@media(max-width:640px){body{background-image:none}.workspace-shell{margin:0;box-shadow:none}.app-main{padding:72px 14px 28px;background:#f8fafc}.workspace-welcome{display:block;margin-bottom:20px}.workspace-welcome h2{font-size:26px}.welcome-mark{margin-top:16px;width:max-content}.import-card{padding:17px}.import-card .upload-zone{padding:26px 12px}.import-card > div[style*="display:flex"]{align-items:stretch!important;gap:8px!important}.import-card .toggle-wrap{font-size:12px!important}.import-card #genBtn{width:100%;}.dashboard-rail{display:flex}.rail-card{padding:16px}.sidebar{background:#f4f7ff}.sidebar-item{width:76px;flex-direction:column}.sidebar-bottom .sidebar-item{flex-direction:row}.q-text{font-size:16px;}}
 </style>
 </head>
 <body>
 
-<div class="app">
+<div class="app workspace-shell">
 
   <!-- Hamburger (mobile) -->
   <button class="hamburger" id="hamburger" onclick="toggleSidebar()">☰</button>
@@ -741,7 +828,19 @@ textarea::placeholder{color:var(--t3)}
   <main class="app-main">
     <!-- Tab: 导入 -->
     <div class="tab-content active" id="tabImport">
-      <div class="card">
+      <div class="workspace-welcome">
+        <div>
+          <h2>开始一段专注学习。</h2>
+          <p>导入资料，生成属于你的练习题、背诵卡和知识导图。</p>
+        </div>
+        <div class="welcome-mark" aria-label="学习工作台概览">
+          <span><b>AI</b>智能出题</span>
+          <span><b>5</b>学习工具</span>
+          <span><b>∞</b>本地保存</span>
+        </div>
+      </div>
+      <div class="import-dashboard">
+      <div class="card import-card">
         <div class="card-hd">📥 导入资料</div>
         <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
           <div class="up-icon">📄</div>
@@ -762,6 +861,33 @@ textarea::placeholder{color:var(--t3)}
           <button class="btn btn-p" id="genBtn" onclick="generateExam()">AI 生成试卷</button>
         </div>
         <div id="genStatus"></div>
+      </div>
+      <aside class="dashboard-rail">
+        <section class="rail-card">
+          <h3><i>✦</i> AI 学习建议</h3>
+          <p>资料按章节分段、重点清晰时，生成的题目和知识大纲会更准确。</p>
+          <small>建议先从一章或一个主题开始</small>
+        </section>
+        <section class="rail-card rail-goals">
+          <h3>本次学习</h3>
+          <div class="rail-goal">
+            <div class="rail-goal-head"><span>生成练习题</span><b>准备开始</b></div>
+            <div class="rail-meter"><span style="width:38%"></span></div>
+          </div>
+          <div class="rail-goal">
+            <div class="rail-goal-head"><span>复习关键知识</span><b>按自己的节奏</b></div>
+            <div class="rail-meter"><span style="width:72%"></span></div>
+          </div>
+        </section>
+        <section class="rail-card rail-note">
+          <div class="rail-note-visual">⌁</div>
+          <div class="rail-note-body">
+            <h3>从资料到掌握</h3>
+            <p>生成后可按题型练习、背诵大题，或从思维导图定位薄弱知识点。</p>
+            <a href="#" onclick="switchTab('library');return false;">查看我的题库 →</a>
+          </div>
+        </section>
+      </aside>
       </div>
     </div>
 
