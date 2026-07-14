@@ -12,5 +12,7 @@ assert.match(html, /--sidebar-surface:\s*#eaf2ff/, 'the detached sidebar should 
 assert.match(html, /\.workspace-shell\{[^}]*gap:/s, 'the sidebar and main workspace should be separated by a visible gap');
 assert.match(html, /\.sidebar\{[^}]*border-radius:/s, 'the sidebar should be an independent rounded surface');
 assert.match(html, /\.app-main\{[^}]*border-radius:/s, 'the main workspace should be an independent rounded surface');
+assert.doesNotMatch(html, /\.import-card \.card-hd::before\{content:'\+'/s, 'the import heading should not have a decorative plus icon');
+assert.match(html, /<h2>开始一段专注学习<\/h2>/, 'the welcome title should not end with punctuation');
 
 console.log('workspace shell UI contract passed');
