@@ -7,6 +7,7 @@ const sql = fs.readFileSync(
 ).toLowerCase();
 
 assert.ok(sql.includes('create table public.profiles'));
+assert.ok(sql.includes('id uuid primary key references auth.users(id) on delete cascade'));
 assert.ok(sql.includes('username text not null unique'));
 assert.match(
   sql,
@@ -21,6 +22,10 @@ assert.ok(sql.includes("library jsonb not null default '[]'::jsonb"));
 assert.ok(sql.includes("progress jsonb not null default '{\"daily\": {}, \"bytype\": {}}'::jsonb"));
 assert.ok(sql.includes("vocab_history jsonb not null default '[]'::jsonb"));
 assert.ok(sql.includes("settings jsonb not null default '{}'::jsonb"));
+assert.match(
+  sql,
+  /create table public\.learning_snapshots\s*\([\s\S]*?updated_at timestamptz not null default now\(\)/,
+);
 assert.ok(sql.includes('alter table public.profiles enable row level security'));
 assert.ok(sql.includes('alter table public.learning_snapshots enable row level security'));
 assert.match(
