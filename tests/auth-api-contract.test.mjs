@@ -13,7 +13,7 @@ assert.match(shared, /@vercel\/kv/);
 assert.match(shared, /kv\.eval\(/);
 assert.doesNotMatch(shared, /kv\.expire\(/);
 
-for (const route of ['register', 'login', 'password-reset']) {
+for (const route of ['register', 'login', 'password-reset', 'resend-verification']) {
   const source = read(`api/auth/${route}.mjs`);
   assert.match(source, /req\.method !== 'POST'/);
   assert.match(source, /SUPABASE_SERVICE_ROLE_KEY/);
@@ -21,7 +21,14 @@ for (const route of ['register', 'login', 'password-reset']) {
 }
 
 assert.match(read('api/auth/login.mjs'), /signInWithPassword/);
+assert.match(read('api/auth/login.mjs'), /EMAIL_UNVERIFIED/, 'an otherwise valid login must distinguish an unverified email');
+assert.match(read('api/auth/login.mjs'), /email[_\s-]?not[_\s-]?confirmed|email not confirmed/i, 'the login route must only classify Supabase\'s explicit unconfirmed-email error');
 assert.match(read('api/auth/password-reset.mjs'), /resetPasswordForEmail/);
+
+const resendVerification = read('api/auth/resend-verification.mjs');
+assert.match(resendVerification, /auth\.resend\(/, 'unverified users need a safe way to request another verification email');
+assert.match(resendVerification, /type:\s*['"]signup['"]/, 'the resend route must only send signup verification emails');
+assert.match(resendVerification, /return json\(\{ ok: true \}/, 'the resend route must not reveal whether a username exists');
 
 const register = read('api/auth/register.mjs');
 assert.match(register, /data:\s*\{\s*username\s*\}/);

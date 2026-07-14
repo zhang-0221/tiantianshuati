@@ -3,6 +3,12 @@ import { cors, json, normalizeUsername, parseJson, rateLimit, requireEnv } from 
 
 export const config = { runtime: 'edge' };
 
+function isEmailUnverifiedError(error) {
+  const code = String(error?.code || '').toLowerCase();
+  const message = String(error?.message || '').toLowerCase();
+  return code === 'email_not_confirmed' || /email[\s_-]*(is[\s_-]*)?not[\s_-]*confirmed/.test(message);
+}
+
 export default async function handler(req) {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(req) });
   if (req.method !== 'POST') return json({ ok: false, code: 'METHOD_NOT_ALLOWED' }, 405, cors(req));
@@ -29,6 +35,9 @@ export default async function handler(req) {
     });
     const signedIn = await anonymous.auth.signInWithPassword({ email: profile.data.email, password });
     if (signedIn.error || !signedIn.data.session) {
+      if (isEmailUnverifiedError(signedIn.error)) {
+        return json({ ok: false, code: 'EMAIL_UNVERIFIED' }, 403, cors(req, env.ALLOWED_ORIGIN));
+      }
       return json({ ok: false, code: 'INVALID_CREDENTIALS' }, 401, cors(req, env.ALLOWED_ORIGIN));
     }
     const { access_token, refresh_token, expires_in, token_type } = signedIn.data.session;

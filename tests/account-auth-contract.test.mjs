@@ -19,6 +19,18 @@ assert.match(html, /login-landscape\.webp/, 'the supplied landscape must use the
 assert.match(html, /class="auth-card/, 'the login form needs a dedicated glass card');
 assert.match(html, /id="registerForm"/, 'registration must be available without leaving the gate');
 assert.match(html, /id="resetForm"/, 'password reset must be available without leaving the gate');
+assert.match(html, /id="completeResetForm"/, 'a recovery redirect must lead to a form that can set a new password');
+assert.match(html, /id="recoveryPassword"/, 'the completed recovery flow needs a new-password field');
+assert.match(html, /id="recoveryPasswordConfirm"/, 'the completed recovery flow needs password confirmation');
+assert.match(html, /PASSWORD_RECOVERY/, 'Supabase password-recovery redirects must be recognized as recovery sessions');
+assert.match(html, /function isPasswordRecoveryRedirect\(/, 'the client must recognize recovery redirect parameters before restoring an older session');
+assert.match(html, /query\.get\('reset'\) === '1'[\s\S]*?query\.has\('code'\)/, 'PKCE recovery redirects must be recognized before an older local session is restored');
+assert.match(html, /auth\.updateUser\(\{ password/, 'the completed recovery form must update the password through Supabase');
+assert.match(html, /function submitNewPassword\(/, 'the completed recovery form needs a submission handler');
+assert.match(html, /id="resendVerificationBtn"/, 'unverified login feedback needs an explicit resend control');
+assert.match(html, /function resendVerification\(/, 'the resend-verification control needs a handler');
+assert.match(html, /\/api\/auth\/resend-verification/, 'the browser must call the safe resend-verification endpoint');
+assert.match(html, /EMAIL_UNVERIFIED/, 'the browser must give an explicit status for verified-password but unconfirmed-email logins');
 assert.match(html, /@media\(max-width:640px\)[\s\S]*?\.auth-card/, 'the auth card requires a mobile layout');
 assert.match(html, /<h1 id="authGateTitle">喜刷刷账号<\/h1>/, 'the gate needs a stable accessible title');
 assert.match(html, /\.auth-gate\{[^}]*z-index:3000/s, 'the gate must visually sit above application toasts and dialogs');
