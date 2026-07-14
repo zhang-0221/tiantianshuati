@@ -3277,7 +3277,7 @@ function recordAnswer(isCorrect) {
 }
 
 let chatHistory = [];
-const CHAT_SYS = '你是「喜刷刷」应用中的AI学习助手。你的职责是帮助用户解答学习中的疑问。回答要求：1.简洁清晰，用中文回答；2.如果用户有学习资料相关的问题，给出准确解答；3.鼓励用户思考，引导式提问；4.回答长度适中，不要过长。';
+const CHAT_SYS = '你是一个通用的 DeepSeek 助手。自然、准确地回答用户的问题；根据问题复杂度自行决定回答长度和结构。可以解释概念、分析问题、协助写作和代码。未知或不确定时明确说明，不编造信息。默认使用用户的语言回答。';
 
 function toggleChat() {
   const panel = document.getElementById('chatPanel');
@@ -3317,7 +3317,7 @@ async function sendChat() {
       body: JSON.stringify({
         model: 'deepseek-chat',
         messages: [{ role: 'system', content: CHAT_SYS }, ...chatHistory],
-        temperature: 0.7, max_tokens: 1024
+        temperature: 0.7, max_tokens: 4096
       })
     }, 60000);
 
