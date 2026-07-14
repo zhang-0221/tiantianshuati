@@ -21,7 +21,7 @@ assert.match(html, /id="registerForm"/, 'registration must be available without 
 assert.match(html, /id="resetForm"/, 'password reset must be available without leaving the gate');
 assert.match(html, /@media\(max-width:640px\)[\s\S]*?\.auth-card/, 'the auth card requires a mobile layout');
 assert.match(html, /<h1 id="authGateTitle">喜刷刷账号<\/h1>/, 'the gate needs a stable accessible title');
-assert.match(html, /\.auth-gate\{[^}]*z-index:1200/s, 'the gate must visually sit above application toasts and dialogs');
+assert.match(html, /\.auth-gate\{[^}]*z-index:3000/s, 'the gate must visually sit above application toasts and dialogs');
 assert.doesNotMatch(html, /数据将按账号隔离保存/, 'the static shell must not promise isolation before session wiring exists');
 
 console.log('account auth client contract passed');
