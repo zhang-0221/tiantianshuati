@@ -367,6 +367,9 @@ textarea::placeholder{color:var(--t3)}
 .loading{display:flex;align-items:center;gap:8px;padding:8px 0;color:var(--t2);font-size:13px}
 .spinner{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+.gen-feedback{display:flex;align-items:flex-start;gap:10px;margin-top:12px;padding:11px 13px;border:1px solid #dbe6f5;border-radius:12px;background:#f8fbff;color:#60718c;font-size:12px;line-height:1.6;}
+.gen-feedback .spinner{flex:0 0 auto;margin-top:2px;}.gen-feedback.success{border-color:#bce7d3;background:#f1fcf6;color:#187653;}.gen-feedback.error{border-color:#f2c9c6;background:#fff7f6;color:#a63a34;}
+.gen-feedback-retry{margin-left:auto;flex:0 0 auto;border:0;border-radius:8px;padding:5px 9px;background:#fff;color:#2a67d7;font:700 12px var(--font);cursor:pointer;}
 
 .msg{padding:8px 12px;border-radius:var(--rs);font-size:12px;margin-top:8px}
 .msg.ok{background:var(--green-l);color:var(--green)}
@@ -828,7 +831,7 @@ textarea:focus{border-color:#8db4ff;box-shadow:0 0 0 4px rgba(37,99,235,.09);}
 @media(min-width:961px){.workspace-shell{min-height:calc(100vh - 36px);}.workspace-shell .sidebar{height:calc(100vh - 68px);}}
 @media(max-width:980px){.workspace-shell{padding:12px;gap:12px;}.sidebar{height:calc(100vh - 48px);}.app-main{min-height:calc(100vh - 48px);}}
 @media(max-width:768px){.study-page-content{grid-template-columns:1fr;}.study-side-note{display:none;}}
-@media(max-width:640px){.workspace-shell{display:block;padding:0;}.sidebar{border-radius:0;height:100vh;box-shadow:5px 0 28px rgba(16,32,57,.28);}.app-main{min-height:100vh;border:0;border-radius:0;box-shadow:none;}.hamburger{border-radius:12px;}.chat-toggle{bottom:28px;}.chat-panel.open ~ .chat-toggle{bottom:28px;}.study-page-head{display:block;}.study-page-head .btn{margin-top:15px;width:100%;}.study-page-title{font-size:26px;}.study-page-stats{gap:8px;}.study-stat{padding:13px 10px;}.study-stat b{font-size:20px;}}
+@media(max-width:640px){.workspace-shell{display:block;padding:0;}.sidebar{border-radius:0;height:100vh;box-shadow:5px 0 28px rgba(16,32,57,.28);}.app-main{min-height:100vh;border:0;border-radius:0;box-shadow:none;}.hamburger{border-radius:12px;}.chat-toggle{bottom:28px;}.chat-panel.open ~ .chat-toggle{bottom:28px;}.study-page-head{display:block;}.study-page-head .btn{margin-top:15px;width:100%;}.study-page-title{font-size:26px;}.study-page-stats{gap:8px;}.study-stat{padding:13px 10px;}.study-stat b{font-size:20px;}.generation-controls{flex-direction:column;align-items:stretch!important;}.generation-controls .btn{width:100%;}.generation-controls label{padding:3px 0;}.gen-feedback{width:100%;margin-top:10px;}.gen-feedback-retry{margin-left:0;}}
 </style>
 </head>
 <body>
@@ -894,7 +897,7 @@ textarea:focus{border-color:#8db4ff;box-shadow:0 0 0 4px rgba(37,99,235,.09);}
         <div id="fileBadge" style="display:none;"></div>
         <div class="divider">或者粘贴文本</div>
         <textarea id="materialInput" placeholder="粘贴复习资料……&#10;换行分隔不同知识点效果更好"></textarea>
-        <div style="display:flex;align-items:center;gap:12px;margin-top:10px;flex-wrap:wrap;">
+        <div class="generation-controls" style="display:flex;align-items:center;gap:12px;margin-top:10px;flex-wrap:wrap;">
           <label class="toggle-wrap" style="font-size:13px;color:var(--text);gap:8px;">
             <input type="checkbox" id="bigQuestionsToggle" checked style="width:16px;height:16px;accent-color:var(--accent);"> 生成大题（简答+论述 → 背诵宝地）
           </label>
@@ -988,7 +991,7 @@ textarea:focus{border-color:#8db4ff;box-shadow:0 0 0 4px rgba(37,99,235,.09);}
             <div id="reciteFileBadge" style="display:none;"></div>
             <div class="divider">或者粘贴文本</div>
             <textarea id="reciteMaterialInput" placeholder="粘贴需要背诵的复习资料……&#10;换行分隔不同知识点效果更好"></textarea>
-            <button class="btn btn-p" id="reciteGenBtn" onclick="generateReciteExam()">📖 生成背诵题目（仅简答+论述）</button>
+            <div class="generation-controls"><button class="btn btn-p" id="reciteGenBtn" onclick="generateReciteExam()">📖 生成背诵题目（仅简答+论述）</button></div>
             <div id="reciteGenStatus"></div>
           </div>
         </div>
@@ -1009,7 +1012,7 @@ textarea:focus{border-color:#8db4ff;box-shadow:0 0 0 4px rgba(37,99,235,.09);}
         <div class="card-hd">📝 情景单词 <span class="card-tag">AI 用你输入的单词生成情景短文</span></div>
         <div style="margin-bottom:8px;font-size:12px;color:var(--t3);">输入今天要巩固的单词，用逗号或空格分隔</div>
         <textarea id="vocabInput" placeholder="例如：apple, banana, delicious, breakfast, healthy&#10;或者：苹果 香蕉 美味 早餐 健康"></textarea>
-        <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;align-items:center;">
+        <div class="generation-controls" style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;align-items:center;">
           <button class="btn btn-p" id="vocabGenBtn" onclick="generateVocabStory()">✨ 生成情景短文</button>
           <label style="font-size:12px;color:var(--t2);display:flex;align-items:center;gap:6px;cursor:pointer;">
             <input type="checkbox" id="vocabTranslateToggle" checked style="accent-color:var(--accent);"> 同时生成中文翻译
@@ -1238,6 +1241,14 @@ function toast(msg, type) {
   wrap.appendChild(el);
   setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .25s'; setTimeout(() => el.remove(), 250); }, 1800);
 }
+
+function getGenerationFeedback(state, message, retryHandler) {
+  const safeMessage = String(message).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+  const icon = state === 'loading' ? '<div class="spinner"></div>' : state === 'success' ? '<span>✓</span>' : '<span>!</span>';
+  const retry = state === 'error' && retryHandler ? '<button class="gen-feedback-retry" onclick="' + retryHandler + '()">重新尝试</button>' : '';
+  return '<div class="gen-feedback ' + state + '">' + icon + '<span>' + safeMessage + '</span>' + retry + '</div>';
+}
+function setGenerationFeedback(statusEl, state, message, retryHandler) { statusEl.innerHTML = getGenerationFeedback(state, message, retryHandler); }
 
 // ==================== TABS ====================
 function toggleSidebar() {
@@ -2152,7 +2163,7 @@ async function generateExam() {
   const includeBigQuestions = document.getElementById('bigQuestionsToggle').checked;
   const genOptions = { includeOutline, includeBigQuestions };
   btn.disabled = true; btn.textContent = 'AI 生成中……';
-  status.innerHTML = '<div class="loading"><div class="spinner"></div>连接 DeepSeek……</div>';
+  setGenerationFeedback(status, 'loading', '连接 DeepSeek……');
 
   try {
     let allQuestions = [];
@@ -2161,16 +2172,16 @@ async function generateExam() {
     // For materials > 8000 chars, split into chunks and process in batches
     if (material.length > 8000) {
       const chunks = splitIntoChunks(material, 5000);
-      status.innerHTML = '<div class="loading"><div class="spinner"></div>资料较长，分 ' + chunks.length + ' 段处理（共约' + material.length + '字）……</div>';
+      setGenerationFeedback(status, 'loading', '资料较长，分 ' + chunks.length + ' 段处理（共约' + material.length + '字）……');
 
       for (let ci = 0; ci < chunks.length; ci++) {
-        status.innerHTML = '<div class="loading"><div class="spinner"></div>AI 正在出题：第 ' + (ci+1) + '/' + chunks.length + ' 段……</div>';
+        setGenerationFeedback(status, 'loading', 'AI 正在出题：第 ' + (ci+1) + '/' + chunks.length + ' 段……');
         const result = await callAI(chunks[ci], '请根据以下学习资料生成考试题目，尽量覆盖本段所有知识点：\n\n' + chunks[ci], { includeOutline: false, includeBigQuestions: genOptions.includeBigQuestions });
         allQuestions = allQuestions.concat(result.questions);
       }
     } else {
       // Single call for smaller materials
-      status.innerHTML = '<div class="loading"><div class="spinner"></div>AI 正在分析资料并生成题目' + (includeOutline ? '和知识大纲' : '') + '……</div>';
+      setGenerationFeedback(status, 'loading', 'AI 正在分析资料并生成题目' + (includeOutline ? '和知识大纲' : '') + '……');
       const result = await callAI(material, '请根据以下学习资料生成考试题目，覆盖资料中所有知识点：\n\n' + material, genOptions);
       allQuestions = result.questions;
       outline = result.outline || null;
@@ -2198,14 +2209,14 @@ async function generateExam() {
     saveExam(name);
     switchTab('library');
     showExamDetail(activeExam.id);
-    status.innerHTML = '<div class="msg ok">已生成 ' + questions.length + ' 题，自动保存到题库</div>';
+    setGenerationFeedback(status, 'success', '已生成 ' + questions.length + ' 题，并保存到我的题库');
     toast('生成 ' + questions.length + ' 题', 'ok');
 
   } catch (err) {
     let msg = err.message;
     if (msg === 'TIMEOUT') msg = '请求超时。请检查：\n1. 网络能否访问 api.deepseek.com\n2. 是否需要开代理/VPN\n3. 资料是否过长';
     if (err.name === 'TypeError' && msg.includes('fetch')) msg = '网络连接失败。请检查网络或尝试开代理';
-    status.innerHTML = '<div class="msg err">' + escH(msg).replace(/\n/g, '<br>') + '</div>';
+    setGenerationFeedback(status, 'error', msg, 'generateExam');
     toast('生成失败', 'err');
   }
   btn.disabled = false; btn.textContent = 'AI 生成试卷';
@@ -4146,21 +4157,21 @@ async function generateReciteExam() {
 
   const btn = document.getElementById('reciteGenBtn'), status = document.getElementById('reciteGenStatus');
   btn.disabled = true; btn.textContent = 'AI 生成中……';
-  status.innerHTML = '<div class="loading"><div class="spinner"></div>连接 DeepSeek……</div>';
+  setGenerationFeedback(status, 'loading', '连接 DeepSeek……');
 
   try {
     let allQuestions = [];
 
     if (material.length > 8000) {
       const chunks = splitIntoChunks(material, 5000);
-      status.innerHTML = '<div class="loading"><div class="spinner"></div>资料较长，分 ' + chunks.length + ' 段处理……</div>';
+      setGenerationFeedback(status, 'loading', '资料较长，分 ' + chunks.length + ' 段处理……');
       for (let ci = 0; ci < chunks.length; ci++) {
-        status.innerHTML = '<div class="loading"><div class="spinner"></div>AI 正在生成背诵题目：第 ' + (ci+1) + '/' + chunks.length + ' 段……</div>';
+        setGenerationFeedback(status, 'loading', 'AI 正在生成背诵题目：第 ' + (ci+1) + '/' + chunks.length + ' 段……');
         const result = await callAI(chunks[ci], '请根据以下学习资料生成简答题和论述题，用于背诵记忆。覆盖本段所有重要知识点：\n\n' + chunks[ci], { includeOutline: false, includeBigQuestions: true, reciteOnly: true });
         allQuestions = allQuestions.concat(result.questions);
       }
     } else {
-      status.innerHTML = '<div class="loading"><div class="spinner"></div>AI 正在分析资料并生成背诵题目（简答+论述）……</div>';
+      setGenerationFeedback(status, 'loading', 'AI 正在分析资料并生成背诵题目（简答+论述）……');
       const result = await callAI(material, '请根据以下学习资料生成简答题和论述题，用于背诵记忆。覆盖资料中所有重要知识点：\n\n' + material, { includeOutline: false, includeBigQuestions: true, reciteOnly: true });
       allQuestions = result.questions;
     }
@@ -4183,14 +4194,14 @@ async function generateReciteExam() {
     // Clear input
     document.getElementById('reciteMaterialInput').value = '';
     document.getElementById('reciteFileBadge').style.display = 'none';
-    status.innerHTML = '<div class="msg ok">已生成 ' + questions.length + ' 道背诵题目，自动保存</div>';
+    setGenerationFeedback(status, 'success', '已生成 ' + questions.length + ' 道背诵题目，并自动保存');
     toast('生成 ' + questions.length + ' 道背诵题', 'ok');
 
   } catch (err) {
     let msg = err.message;
     if (msg === 'TIMEOUT') msg = '请求超时。请检查：\n1. 网络能否访问 api.deepseek.com\n2. 是否需要开代理/VPN\n3. 资料是否过长';
     if (err.name === 'TypeError' && msg.includes('fetch')) msg = '网络连接失败。请检查网络或尝试开代理';
-    status.innerHTML = '<div class="msg err">' + escH(msg).replace(/\n/g, '<br>') + '</div>';
+    setGenerationFeedback(status, 'error', msg, 'generateReciteExam');
     toast('生成失败', 'err');
   }
   btn.disabled = false; btn.textContent = '📖 生成背诵题目（仅简答+论述）';
@@ -4325,7 +4336,7 @@ async function generateVocabStory() {
   const translate = document.getElementById('vocabTranslateToggle').checked;
   const btn = document.getElementById('vocabGenBtn'), status = document.getElementById('vocabStatus');
   btn.disabled = true; btn.textContent = 'AI 创作中……';
-  status.innerHTML = '<div class="loading"><div class="spinner"></div>正在用这些单词创作情景短文……</div>';
+  setGenerationFeedback(status, 'loading', '正在用这些单词创作情景短文……');
 
   const wordList = words.join(', ');
   const prompt = `请用以下单词创作一篇自然流畅的英语情景短文。要求：
@@ -4407,14 +4418,14 @@ ${translate ? '- 最后请用 ===TRANSLATION=== 分隔，后面附上中文翻�
     saveVocabHistory();
     renderVocabHistory();
 
-    status.innerHTML = '<div class="msg ok">短文已生成 ✓</div>';
+    setGenerationFeedback(status, 'success', '短文已生成，已保存到历史记录');
     toast('情景短文已生成', 'ok');
     document.getElementById('vocabInput').value = '';
 
   } catch (err) {
     let msg = err.message;
     if (msg === 'TIMEOUT') msg = '请求超时，请检查网络';
-    status.innerHTML = '<div class="msg err">' + escH(msg) + '</div>';
+    setGenerationFeedback(status, 'error', msg, 'generateVocabStory');
     toast('生成失败', 'err');
   }
   btn.disabled = false; btn.textContent = '✨ 生成情景短文';
