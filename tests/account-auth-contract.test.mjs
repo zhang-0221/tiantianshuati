@@ -25,7 +25,7 @@ assert.match(html, /\.auth-gate\{[^}]*z-index:3000/s, 'the gate must visually si
 assert.doesNotMatch(html, /数据将按账号隔离保存/, 'the static shell must not promise isolation before session wiring exists');
 
 assert.match(html, /const LS_AUTH_SESSION = 'ttsk_auth_session'/, 'authenticated sessions need a dedicated local storage key');
-assert.match(html, /cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@2/, 'the browser client must load Supabase from a CDN');
+assert.match(html, /cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@2\.57\.0/, 'the browser client must pin the Supabase CDN version');
 for (const fn of ['submitRegistration', 'submitLogin', 'submitPasswordReset', 'restoreSession', 'signOutAccount', 'apiFetch']) {
   assert.match(html, new RegExp(`(?:async )?function ${fn}\\(`), `missing browser auth function: ${fn}`);
 }
@@ -39,5 +39,9 @@ assert.doesNotMatch(html, /localStorage\.setItem\([^\n]*password/i, 'passwords m
 assert.match(html, /id="accountMenu"[^>]*hidden/, 'the sidebar account menu must remain hidden until authentication succeeds');
 assert.match(html, /id="accountUsername"/, 'the account menu must show a username without exposing email');
 assert.match(html, /onclick="signOutAccount\(\)"/, 'the authenticated sidebar must provide a logout action');
+assert.match(html, /if \(!client\) \{\s*setAuthGateActive\(AUTH_GATE_ENABLED\);\s*setAuthStatus\(/, 'a configured gate must fail closed when the auth runtime is unavailable');
+assert.doesNotMatch(html, /function initializeAuth\(\)[\s\S]*?if \(!client\) \{ setAuthGateActive\(false\)/, 'a configured gate must never unlock because the client is missing');
+assert.doesNotMatch(html, /onAuthStateChange\([\s\S]*?SIGNED_IN[\s\S]*?applyAuthenticatedSession/, 'an unverified SIGNED_IN event must not unlock the workspace');
+assert.match(html, /if \(active\) \{[\s\S]*?requestAnimationFrame\([\s\S]*?firstAction\?\.focus\(\)/, 'opening the gate must focus its first actionable control');
 
 console.log('account auth client contract passed');

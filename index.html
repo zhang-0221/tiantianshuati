@@ -21,7 +21,7 @@
   document.head.appendChild(s);
 })();
 </script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.0"></script>
 <style>
 :root {
   --bg: #f5f5f7;
@@ -1331,6 +1331,11 @@ function setAuthGateActive(active) {
       element.inert = active;
       element.setAttribute('aria-hidden', String(active));
     });
+  if (active) {
+    const visibleForm = gate.querySelector('.auth-form.active');
+    const firstAction = visibleForm?.querySelector('input:not([disabled]), button:not([disabled])');
+    requestAnimationFrame(() => firstAction?.focus());
+  }
 }
 
 // ==================== TOAST ====================
@@ -1486,7 +1491,11 @@ async function submitPasswordReset(event) {
 
 async function restoreSession() {
   const client = getAuthClient();
-  if (!client) { setAuthGateActive(false); return null; }
+  if (!client) {
+    setAuthGateActive(AUTH_GATE_ENABLED);
+    setAuthStatus(AUTH_GATE_ENABLED ? '账号服务暂不可用，请稍后再试。' : '');
+    return null;
+  }
   const stored = storedAuthSession();
   if (!stored?.access_token || !stored?.refresh_token) {
     setAuthGateActive(AUTH_GATE_ENABLED);
@@ -1523,16 +1532,21 @@ async function signOutAccount() {
 
 function initializeAuth() {
   const client = getAuthClient();
-  if (!client) { setAuthGateActive(false); return; }
+  if (!client) {
+    setAuthGateActive(AUTH_GATE_ENABLED);
+    setAuthStatus(AUTH_GATE_ENABLED ? '账号服务暂不可用，请稍后再试。' : '');
+    return;
+  }
+  setAuthGateActive(AUTH_GATE_ENABLED);
   authStateSubscription = client.auth.onAuthStateChange((event, session) => {
     if (event === 'SIGNED_OUT' || !session) {
       clearAuthenticatedSession();
       setAuthGateActive(AUTH_GATE_ENABLED);
       return;
     }
-    if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+    if (event === 'TOKEN_REFRESHED' && session && authenticatedUser) {
       const username = storedAuthSession()?.username;
-      applyAuthenticatedSession(session, session.user, username);
+      saveAuthSession(session, usernameForUser(authenticatedUser, username));
     }
   });
   restoreSession();
