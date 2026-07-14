@@ -32,7 +32,9 @@ assert.deepEqual(JSON.parse(JSON.stringify(sandbox.getWorkspaceStats([
 for (const id of ['statLibraryTotal', 'statTodayAnswered', 'statReviewDue']) {
   assert.match(html, new RegExp(`id="${id}"`), `missing live metric #${id}`);
 }
-assert.match(html, /class="si-icon"><svg/, 'the sidebar should use inline SVG icons');
+assert.match(html, /class="si-icon">📥<\/span>导入/, 'the sidebar should preserve the original emoji import icon');
+assert.match(html, /<div class="card-hd">📥 导入资料<\/div>/, 'the import heading should preserve its original emoji icon');
+assert.match(html, /<div class="up-icon">📄<\/div>/, 'the upload area should preserve its original emoji icon');
 assert.match(html, /\.chat-toggle\{bottom:28px/, 'the mobile chat button should sit below the generation action');
 
 console.log('dashboard polish contract passed');

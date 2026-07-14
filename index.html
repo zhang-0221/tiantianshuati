@@ -808,9 +808,6 @@ textarea:focus{border-color:#8db4ff;box-shadow:0 0 0 4px rgba(37,99,235,.09);}
 .sidebar-item.active .si-icon{filter:none;}
 .sidebar-bottom{border-color:#ccdbf3;}.sidebar-bottom .sidebar-item{color:#5f789e;}
 .sidebar-key-tag.set{background:#dff8ec;color:#17704e;}.sidebar-key-tag.unset{background:#fff2d9;color:#b96808;}
-.si-icon{display:inline-flex;align-items:center;justify-content:center;}.si-icon svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;}
-.section-heading{display:inline-flex;align-items:center;gap:8px;}.section-heading svg,.rail-card h3 .ui-icon{width:18px;height:18px;stroke:var(--blue);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
-.upload-zone .up-icon{display:flex;justify-content:center;}.upload-zone .up-icon svg{width:34px;height:34px;stroke:#7b8da9;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;}
 .app-main{
   min-height:calc(100vh - 68px);border:1px solid #e1e8f4;border-radius:var(--surface-radius);
   background:rgba(252,253,255,.92);box-shadow:0 18px 38px rgba(39,58,91,.07);
@@ -835,24 +832,24 @@ textarea:focus{border-color:#8db4ff;box-shadow:0 0 0 4px rgba(37,99,235,.09);}
     <div class="sidebar-brand"><h1>喜刷刷</h1></div>
     <nav class="sidebar-nav">
       <button class="sidebar-item active" id="navImport" onclick="switchTab('import')">
-        <span class="si-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11"/><path d="m8 10 4 4 4-4"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg></span>导入
+        <span class="si-icon">📥</span>导入
       </button>
       <button class="sidebar-item" id="navLib" onclick="switchTab('library')">
-        <span class="si-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.5A2.5 2.5 0 0 1 7.5 2H20v17.5H7.5A2.5 2.5 0 0 0 5 22z"/><path d="M5 4.5v15"/><path d="M9 6h7"/></svg></span>我的题库
+        <span class="si-icon">📚</span>我的题库
       </button>
       <button class="sidebar-item" id="navRecite" onclick="switchTab('recite')">
-        <span class="si-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H12v16H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M20 5.5A2.5 2.5 0 0 0 17.5 3H12v16h5.5a2.5 2.5 0 0 1 2.5 2.5z"/></svg></span>背诵宝地
+        <span class="si-icon">📖</span>背诵宝地
       </button>
       <button class="sidebar-item" id="navVocab" onclick="switchTab('vocab')">
-        <span class="si-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 20 4.4-1 9.8-9.8a2.1 2.1 0 0 0-3-3L5.4 16z"/><path d="m13.8 7.7 2.5 2.5"/><path d="M4 4h6"/></svg></span>情景单词
+        <span class="si-icon">📝</span>情景单词
       </button>
       <button class="sidebar-item" id="navMind" onclick="switchTab('mindmap')">
-        <span class="si-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2"/><circle cx="5" cy="18" r="2"/><circle cx="19" cy="18" r="2"/><path d="M12 7v4M7 17l4-4m6 4-4-4"/></svg></span>思维导图
+        <span class="si-icon">🧠</span>思维导图
       </button>
     </nav>
     <div class="sidebar-bottom">
       <button class="sidebar-item" onclick="openSettings()">
-        <span class="si-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.2 2.2-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5v.2h-3.2v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1-2.2-2.2.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H5v-3.2h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1 2.2-2.2.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5V3.5h3.2v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1 2.2 2.2-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1h.2V13h-.2a1.7 1.7 0 0 0-1.5 1z"/></svg></span>API Key
+        <span class="si-icon">⚙️</span>API Key
         <span class="sidebar-key-tag unset" id="keyTag">未设置</span>
       </button>
     </div>
@@ -875,9 +872,9 @@ textarea:focus{border-color:#8db4ff;box-shadow:0 0 0 4px rgba(37,99,235,.09);}
       </div>
       <div class="import-dashboard">
       <div class="card import-card">
-        <div class="card-hd"><span class="section-heading"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11"/><path d="m8 10 4 4 4-4"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>导入资料</span></div>
+        <div class="card-hd">📥 导入资料</div>
         <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
-          <div class="up-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg></div>
+          <div class="up-icon">📄</div>
           <div class="up-text">点击上传或拖拽文件</div>
           <div class="up-hint">支持 .txt / .md / .docx / .pdf</div>
         </div>
