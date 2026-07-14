@@ -818,6 +818,7 @@ textarea:focus{border-color:#8db4ff;box-shadow:0 0 0 4px rgba(37,99,235,.09);}
 .card,.rail-card,.lib-item,.prog-item,.recite-card,.result-card,.mind-list-card{border-radius:16px;}
 .modal,.chat-panel,.answer-sheet{border-radius:18px;}
 .study-page{padding:4px 0 18px;}
+.library-practice-mode .study-page-head,.library-practice-mode .library-page-stats{display:none;}
 .study-page-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin:4px 0 22px;}
 .study-page-kicker{font-size:11px;letter-spacing:.08em;font-weight:800;color:#4c78ba;}
 .study-page-title{margin:4px 0 0;color:#10213e;font-size:30px;line-height:1.16;letter-spacing:-.06em;}
@@ -1282,6 +1283,10 @@ function switchTab(tab) {
   }
   // Close mobile sidebar after switching tab
   if (window.innerWidth <= 640) { document.getElementById('sidebar').classList.remove('open'); document.getElementById('hamburger').textContent = '☰'; }
+}
+
+function setLibraryPracticeMode(isPractice) {
+  document.getElementById('tabLibrary').classList.toggle('library-practice-mode', isPractice);
 }
 
 // ==================== API KEY ====================
@@ -1775,6 +1780,7 @@ let detailMode = null; // 'sequential' | 'random' | 'wrong'
 
 function showExamDetail(id) {
   const e = library.find(x => x.id === id); if (!e) return;
+  setLibraryPracticeMode(true);
   document.getElementById('libraryStudyLayout').style.display = 'none';
   detailExamId = id; detailMode = null;
   const submitted = e.isSubmitted || {}, correct = e.isCorrect || {};
@@ -1894,6 +1900,7 @@ function startTypePracticeWithOptions(id, type, reset) {
   const e = library.find(x => x.id === id); if (!e) return;
   const questions = e.questions.filter(q => q.type === type);
   if (!questions.length) { toast('该题型无题目', 'err'); return; }
+  setLibraryPracticeMode(true);
 
   const typeQIds = new Set(questions.map(q => String(q.id)));
 
@@ -1979,6 +1986,7 @@ function startPractice(id, mode, reset) {
   // Only use small questions (single/multiple/tf) for practice
   let questions = e.questions.filter(q => q.type === 'single' || q.type === 'multiple' || q.type === 'tf');
   if (!questions.length) { toast('该试卷暂无选择题/判断题', 'err'); return; }
+  setLibraryPracticeMode(true);
   if (mode === 'wrong') {
     const submitted = e.isSubmitted || {}, correct = e.isCorrect || {}, cut = e.cutWrong || {};
     questions = questions.filter(q => submitted[q.id] && !correct[q.id] && !cut[q.id]);
@@ -2024,6 +2032,7 @@ function startPractice(id, mode, reset) {
 
 // ==================== SUB-VIEW SWITCHING ====================
 function showLibView() {
+  setLibraryPracticeMode(false);
   document.getElementById('libraryStudyLayout').style.display = '';
   document.getElementById('libView').style.display = 'block';
   document.getElementById('detailView').style.display = 'none';
@@ -2032,6 +2041,7 @@ function showLibView() {
 }
 
 function showQuizView() {
+  setLibraryPracticeMode(true);
   document.getElementById('libraryStudyLayout').style.display = 'none';
   document.getElementById('libView').style.display = 'none';
   document.getElementById('detailView').style.display = 'none';
@@ -3843,6 +3853,7 @@ function practiceNode() {
   if (!currentMindExamId || !currentNodePayload) return;
   const e = library.find(x => x.id === currentMindExamId);
   if (!e) return;
+  setLibraryPracticeMode(true);
   // Filter questions linked to this node
   const nodeId = currentNodePayload.id;
   const linkedQuestions = e.questions.filter(q => q.outlineNodeId === nodeId);
@@ -3859,6 +3870,7 @@ function practiceNode() {
   document.getElementById('tabLibrary').classList.add('active');
   document.getElementById('tabImport').classList.remove('active');
   document.getElementById('tabMindmap').classList.remove('active');
+  document.getElementById('libraryStudyLayout').style.display = 'none';
   document.getElementById('libView').style.display = 'none';
   document.getElementById('detailView').style.display = 'none';
   document.getElementById('quizView').style.display = 'block';
