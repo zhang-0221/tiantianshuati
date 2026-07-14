@@ -21,6 +21,7 @@
   document.head.appendChild(s);
 })();
 </script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root {
   --bg: #f5f5f7;
@@ -811,6 +812,7 @@ textarea:focus{border-color:#8db4ff;box-shadow:0 0 0 4px rgba(37,99,235,.09);}
 .sidebar-item.active .si-icon{filter:none;}
 .sidebar-bottom{border-color:#ccdbf3;}.sidebar-bottom .sidebar-item{color:#5f789e;}
 .sidebar-key-tag.set{background:#dff8ec;color:#17704e;}.sidebar-key-tag.unset{background:#fff2d9;color:#b96808;}
+.account-menu{width:100%;margin-top:8px;padding-top:8px;border-top:1px solid #ccdbf3;}.account-menu[hidden]{display:none;}.account-identity{display:flex;align-items:center;gap:6px;padding:5px 4px 8px;color:#3d5f90;font-size:10px;font-weight:700;overflow:hidden;}.account-identity span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}.account-menu .sidebar-item{color:#5f789e;}
 .app-main{
   min-height:calc(100vh - 68px);border:1px solid #e1e8f4;border-radius:var(--surface-radius);
   background:rgba(252,253,255,.92);box-shadow:0 18px 38px rgba(39,58,91,.07);
@@ -867,7 +869,7 @@ textarea:focus{border-color:#8db4ff;box-shadow:0 0 0 4px rgba(37,99,235,.09);}
   <div class="auth-card">
     <p class="auth-kicker">YOUR LEARNING SPACE</p>
     <h1 id="authGateTitle">喜刷刷账号</h1>
-    <form class="auth-form active" id="loginForm" onsubmit="return handleAuthGateSubmit(event)">
+    <form class="auth-form active" id="loginForm" onsubmit="return submitLogin(event)">
       <h2>欢迎回来</h2>
       <p class="auth-copy">登录后继续管理你的题库与学习进度。</p>
       <label class="auth-field" for="loginUsername">用户名
@@ -882,7 +884,7 @@ textarea:focus{border-color:#8db4ff;box-shadow:0 0 0 4px rgba(37,99,235,.09);}
         <button class="auth-link" type="button" onclick="setAuthView('register')">注册账号</button>
       </div>
     </form>
-    <form class="auth-form" id="registerForm" onsubmit="return handleAuthGateSubmit(event)">
+    <form class="auth-form" id="registerForm" onsubmit="return submitRegistration(event)">
       <h2>创建账号</h2>
       <p class="auth-copy">账号服务配置完成后，学习资料和进度可与账号关联。</p>
       <label class="auth-field" for="registerUsername">用户名
@@ -897,11 +899,11 @@ textarea:focus{border-color:#8db4ff;box-shadow:0 0 0 4px rgba(37,99,235,.09);}
       <button class="auth-submit" type="submit">创建账号</button>
       <div class="auth-links"><button class="auth-link" type="button" onclick="setAuthView('login')">已有账号？去登录</button></div>
     </form>
-    <form class="auth-form" id="resetForm" onsubmit="return handleAuthGateSubmit(event)">
+    <form class="auth-form" id="resetForm" onsubmit="return submitPasswordReset(event)">
       <h2>找回密码</h2>
-      <p class="auth-copy">输入注册邮箱，我们会发送重置密码的验证邮件。</p>
-      <label class="auth-field" for="resetEmail">注册邮箱
-        <input id="resetEmail" name="email" type="email" autocomplete="email" placeholder="输入注册邮箱" required>
+      <p class="auth-copy">输入注册用户名，我们会向绑定邮箱发送重置密码邮件。</p>
+      <label class="auth-field" for="resetUsername">用户名
+        <input id="resetUsername" name="username" type="text" autocomplete="username" placeholder="输入注册时的用户名" required>
       </label>
       <button class="auth-submit" type="submit">发送重置邮件</button>
       <div class="auth-links"><button class="auth-link" type="button" onclick="setAuthView('login')">返回登录</button></div>
@@ -942,6 +944,10 @@ textarea:focus{border-color:#8db4ff;box-shadow:0 0 0 4px rgba(37,99,235,.09);}
         <span class="si-icon">⚙️</span>API Key
         <span class="sidebar-key-tag unset" id="keyTag">未设置</span>
       </button>
+      <div class="account-menu" id="accountMenu" hidden>
+        <div class="account-identity"><span aria-hidden="true">◉</span><span id="accountUsername"></span></div>
+        <button class="sidebar-item" type="button" onclick="signOutAccount()"><span class="si-icon">↪</span>退出登录</button>
+      </div>
     </div>
   </aside>
 
@@ -1268,6 +1274,7 @@ textarea:focus{border-color:#8db4ff;box-shadow:0 0 0 4px rgba(37,99,235,.09);}
 <script>
 // ==================== STATE ====================
 const LS_KEY = 'ttsk_ds_key', LS_LIB = 'ttsk_library', LS_PROGRESS = 'ttsk_progress';
+const LS_AUTH_SESSION = 'ttsk_auth_session';
 const AUTH_CONFIG = window.TTSK_AUTH_CONFIG || null;
 const AUTH_GATE_ENABLED = Boolean(AUTH_CONFIG?.enableGate === true);
 const MAMMOTH_CDNS = [
@@ -1297,6 +1304,9 @@ let mergeMode = false;
 let mergeSelected = new Set();
 let splitExamId = null;
 let splitMode = 'sequential';
+let authClient = null;
+let authenticatedUser = null;
+let authStateSubscription = null;
 
 // Recite state
 let reciteExamId = null;
@@ -1323,9 +1333,6 @@ function setAuthGateActive(active) {
     });
 }
 
-// Until browser sessions are implemented, only an explicit public config may show the gate.
-setAuthGateActive(AUTH_GATE_ENABLED);
-
 // ==================== TOAST ====================
 function toast(msg, type) {
   const wrap = document.getElementById('toastWrap');
@@ -1336,7 +1343,6 @@ function toast(msg, type) {
   setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .25s'; setTimeout(() => el.remove(), 250); }, 1800);
 }
 
-// The visual gate is ready before the account API/session layer is connected.
 function setAuthView(view) {
   const forms = { login: 'loginForm', register: 'registerForm', reset: 'resetForm' };
   Object.entries(forms).forEach(([name, id]) => document.getElementById(id).classList.toggle('active', name === view));
@@ -1346,11 +1352,193 @@ function setAuthView(view) {
   if (firstInput) firstInput.focus();
 }
 
-function handleAuthGateSubmit(event) {
+function setAuthStatus(message) {
+  document.getElementById('authStatus').textContent = message || '';
+}
+
+function hasAuthRuntime() {
+  return Boolean(AUTH_CONFIG?.supabaseUrl && AUTH_CONFIG?.supabaseAnonKey && AUTH_CONFIG?.apiBase && window.supabase?.createClient);
+}
+
+function getAuthClient() {
+  if (!hasAuthRuntime()) return null;
+  if (!authClient) {
+    authClient = window.supabase.createClient(AUTH_CONFIG.supabaseUrl, AUTH_CONFIG.supabaseAnonKey, {
+      auth: { persistSession: false, autoRefreshToken: true, detectSessionInUrl: true }
+    });
+  }
+  return authClient;
+}
+
+async function apiFetch(path, payload) {
+  if (!AUTH_CONFIG?.apiBase) throw new Error('AUTH_NOT_CONFIGURED');
+  const base = String(AUTH_CONFIG.apiBase).replace(/\/$/, '');
+  const response = await fetch(base + path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await response.json().catch(() => ({}));
+  return { response, data };
+}
+
+function storedAuthSession() {
+  try { return JSON.parse(localStorage.getItem(LS_AUTH_SESSION) || 'null'); } catch { return null; }
+}
+
+function saveAuthSession(session, username) {
+  if (!session?.access_token || !session?.refresh_token) return;
+  localStorage.setItem(LS_AUTH_SESSION, JSON.stringify({
+    access_token: session.access_token,
+    refresh_token: session.refresh_token,
+    expires_at: session.expires_at || null,
+    username: username || ''
+  }));
+}
+
+function usernameForUser(user, fallback) {
+  const username = String(user?.user_metadata?.username || fallback || '').trim();
+  return username || '我的账号';
+}
+
+function renderAccountMenu(user, fallbackUsername) {
+  const menu = document.getElementById('accountMenu');
+  const label = document.getElementById('accountUsername');
+  const username = user ? usernameForUser(user, fallbackUsername) : '';
+  menu.hidden = !user;
+  label.textContent = username;
+}
+
+function applyAuthenticatedSession(session, user, fallbackUsername) {
+  authenticatedUser = user;
+  const username = usernameForUser(user, fallbackUsername);
+  saveAuthSession(session, username);
+  renderAccountMenu(user, username);
+  setAuthGateActive(false);
+}
+
+function clearAuthenticatedSession() {
+  authenticatedUser = null;
+  localStorage.removeItem(LS_AUTH_SESSION);
+  renderAccountMenu(null);
+}
+
+function showAuthFailure(code) {
+  const messages = {
+    INVALID_CREDENTIALS: '用户名或密码不正确，请重试。',
+    USERNAME_TAKEN: '该用户名已被使用，请换一个。',
+    INVALID_INPUT: '请检查用户名、邮箱和密码格式。',
+    RATE_LIMITED: '操作过于频繁，请稍后再试。'
+  };
+  setAuthStatus(messages[code] || '账号服务暂不可用，请稍后再试。');
+}
+
+async function submitLogin(event) {
   event.preventDefault();
-  document.getElementById('authStatus').textContent = '账号服务正在准备中，请稍后再试。';
+  const username = document.getElementById('loginUsername').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  if (!username || !password) return false;
+  setAuthStatus('正在登录…');
+  try {
+    const { response, data } = await apiFetch('/api/auth/login', { username, password });
+    if (!response.ok || !data?.session?.access_token) { showAuthFailure(data?.code); return false; }
+    const client = getAuthClient();
+    if (!client) { setAuthStatus('账号服务配置不完整，请联系管理员。'); return false; }
+    const restored = await client.auth.setSession({
+      access_token: data.session.access_token,
+      refresh_token: data.session.refresh_token
+    });
+    if (restored.error || !restored.data.session) { setAuthStatus('登录会话创建失败，请重试。'); return false; }
+    const userResult = await client.auth.getUser();
+    if (userResult.error || !userResult.data.user) { setAuthStatus('登录验证失败，请重试。'); return false; }
+    applyAuthenticatedSession(restored.data.session, userResult.data.user, username);
+    document.getElementById('loginPassword').value = '';
+    setAuthStatus('');
+  } catch { setAuthStatus('账号服务暂不可用，请稍后再试。'); }
   return false;
 }
+
+async function submitRegistration(event) {
+  event.preventDefault();
+  const username = document.getElementById('registerUsername').value.trim();
+  const email = document.getElementById('registerEmail').value.trim();
+  const password = document.getElementById('registerPassword').value;
+  if (!username || !email || !password) return false;
+  setAuthStatus('正在创建账号…');
+  try {
+    const { response, data } = await apiFetch('/api/auth/register', { username, email, password });
+    if (!response.ok || !data?.ok) { showAuthFailure(data?.code); return false; }
+    document.getElementById('registerPassword').value = '';
+    setAuthStatus('账号已创建，请前往邮箱完成验证后再登录。');
+  } catch { setAuthStatus('账号服务暂不可用，请稍后再试。'); }
+  return false;
+}
+
+async function submitPasswordReset(event) {
+  event.preventDefault();
+  const username = document.getElementById('resetUsername').value.trim();
+  if (!username) return false;
+  setAuthStatus('正在处理请求…');
+  try { await apiFetch('/api/auth/password-reset', { username }); } catch {}
+  setAuthStatus('如果账号存在，重置密码邮件将发送到绑定邮箱。');
+  return false;
+}
+
+async function restoreSession() {
+  const client = getAuthClient();
+  if (!client) { setAuthGateActive(false); return null; }
+  const stored = storedAuthSession();
+  if (!stored?.access_token || !stored?.refresh_token) {
+    setAuthGateActive(AUTH_GATE_ENABLED);
+    return null;
+  }
+  const restored = await client.auth.setSession({
+    access_token: stored.access_token,
+    refresh_token: stored.refresh_token
+  });
+  if (restored.error || !restored.data.session) {
+    clearAuthenticatedSession();
+    setAuthGateActive(AUTH_GATE_ENABLED);
+    return null;
+  }
+  const userResult = await client.auth.getUser();
+  if (userResult.error || !userResult.data.user) {
+    clearAuthenticatedSession();
+    setAuthGateActive(AUTH_GATE_ENABLED);
+    return null;
+  }
+  applyAuthenticatedSession(restored.data.session, userResult.data.user, stored.username);
+  return userResult.data.user;
+}
+
+async function signOutAccount() {
+  if (typeof flushPendingSync === 'function') {
+    try { await flushPendingSync(); } catch {}
+  }
+  const client = getAuthClient();
+  if (client) { try { await client.auth.signOut(); } catch {} }
+  clearAuthenticatedSession();
+  setAuthGateActive(AUTH_GATE_ENABLED && hasAuthRuntime());
+}
+
+function initializeAuth() {
+  const client = getAuthClient();
+  if (!client) { setAuthGateActive(false); return; }
+  authStateSubscription = client.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_OUT' || !session) {
+      clearAuthenticatedSession();
+      setAuthGateActive(AUTH_GATE_ENABLED);
+      return;
+    }
+    if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+      const username = storedAuthSession()?.username;
+      applyAuthenticatedSession(session, session.user, username);
+    }
+  });
+  restoreSession();
+}
+
+initializeAuth();
 
 function getGenerationFeedback(state, message, retryHandler) {
   const safeMessage = String(message).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');

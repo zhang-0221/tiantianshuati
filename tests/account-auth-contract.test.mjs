@@ -24,4 +24,20 @@ assert.match(html, /<h1 id="authGateTitle">喜刷刷账号<\/h1>/, 'the gate nee
 assert.match(html, /\.auth-gate\{[^}]*z-index:3000/s, 'the gate must visually sit above application toasts and dialogs');
 assert.doesNotMatch(html, /数据将按账号隔离保存/, 'the static shell must not promise isolation before session wiring exists');
 
+assert.match(html, /const LS_AUTH_SESSION = 'ttsk_auth_session'/, 'authenticated sessions need a dedicated local storage key');
+assert.match(html, /cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@2/, 'the browser client must load Supabase from a CDN');
+for (const fn of ['submitRegistration', 'submitLogin', 'submitPasswordReset', 'restoreSession', 'signOutAccount', 'apiFetch']) {
+  assert.match(html, new RegExp(`(?:async )?function ${fn}\\(`), `missing browser auth function: ${fn}`);
+}
+assert.match(html, /auth\.setSession\(/, 'stored sessions must be restored through Supabase');
+assert.match(html, /auth\.getUser\(/, 'restored sessions must verify the current user');
+assert.match(html, /auth\.signOut\(/, 'logout must invalidate the Supabase session');
+assert.match(html, /auth\.onAuthStateChange\(/, 'token refreshes must keep the local session current');
+assert.match(html, /access_token/, 'the session contract must use access tokens, never passwords');
+assert.match(html, /localStorage\.removeItem\(LS_AUTH_SESSION\)/, 'logout must clear the locally stored session');
+assert.doesNotMatch(html, /localStorage\.setItem\([^\n]*password/i, 'passwords must never be written to local storage');
+assert.match(html, /id="accountMenu"[^>]*hidden/, 'the sidebar account menu must remain hidden until authentication succeeds');
+assert.match(html, /id="accountUsername"/, 'the account menu must show a username without exposing email');
+assert.match(html, /onclick="signOutAccount\(\)"/, 'the authenticated sidebar must provide a logout action');
+
 console.log('account auth client contract passed');
