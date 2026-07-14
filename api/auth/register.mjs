@@ -35,24 +35,22 @@ export default async function handler(req) {
     const signup = await anonymous.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: `${env.SITE_URL}?verified=1` },
+      options: {
+        data: { username },
+        emailRedirectTo: `${env.SITE_URL}?verified=1`,
+      },
     });
-    if (signup.error) return json({ ok: false, code: 'AUTH_UNAVAILABLE' }, 503, cors(req, env.ALLOWED_ORIGIN));
+    if (signup.error) {
+      // A concurrent registration can make the auth trigger reject this insert.
+      const collision = await service.from('profiles').select('id').eq('username', username).maybeSingle();
+      if (collision.data) return json({ ok: false, code: 'USERNAME_TAKEN' }, 409, cors(req, env.ALLOWED_ORIGIN));
+      return json({ ok: false, code: 'AUTH_UNAVAILABLE' }, 503, cors(req, env.ALLOWED_ORIGIN));
+    }
 
     // Supabase deliberately obscures an already-registered email during sign-up.
     if (!signup.data.user || signup.data.user.identities?.length === 0) {
       return json({ ok: true, needsVerification: true }, 200, cors(req, env.ALLOWED_ORIGIN));
     }
-
-    const profile = await service.from('profiles').insert({
-      id: signup.data.user.id,
-      username,
-      email,
-    });
-    if (profile.error?.code === '23505') {
-      return json({ ok: false, code: 'USERNAME_TAKEN' }, 409, cors(req, env.ALLOWED_ORIGIN));
-    }
-    if (profile.error) return json({ ok: false, code: 'AUTH_UNAVAILABLE' }, 503, cors(req, env.ALLOWED_ORIGIN));
 
     return json({ ok: true, needsVerification: true }, 201, cors(req, env.ALLOWED_ORIGIN));
   } catch {

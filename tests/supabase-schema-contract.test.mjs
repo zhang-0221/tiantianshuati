@@ -64,5 +64,15 @@ const profilePolicies = sql
 assert.ok(profilePolicies.length > 0);
 assert.ok(profilePolicies.every((policy) => !/for\s+(insert|all)\b/.test(policy)));
 assert.doesNotMatch(sql, /service_role_key/i);
+assert.match(
+  sql,
+  /create or replace function public\.create_profile_for_new_user\(\)\s+returns trigger\s+language plpgsql\s+security definer/s,
+);
+assert.match(sql, /new\.raw_user_meta_data\s*->>\s*'username'/);
+assert.match(sql, /insert into public\.profiles\s*\(id, username, email\)/s);
+assert.match(
+  sql,
+  /create trigger on_auth_user_created\s+after insert on auth\.users\s+for each row\s+execute function public\.create_profile_for_new_user\(\)/s,
+);
 
 console.log('supabase schema contract passed');

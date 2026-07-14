@@ -1,6 +1,13 @@
 import { kv } from '@vercel/kv';
 
 const USERNAME_PATTERN = /^[a-z0-9_]{3,24}$/;
+const RATE_LIMIT_SCRIPT = `
+  local count = redis.call('INCR', KEYS[1])
+  if count == 1 then
+    redis.call('EXPIRE', KEYS[1], ARGV[1])
+  end
+  return count
+`;
 
 export function normalizeUsername(value) {
   const username = typeof value === 'string' ? value.trim().toLowerCase() : '';
@@ -57,8 +64,7 @@ export function getClientIp(req) {
 export async function rateLimit(req, route, limit = 10, windowSeconds = 60) {
   const key = `auth-rate:${route}:${getClientIp(req)}`;
   try {
-    const count = await kv.incr(key);
-    if (count === 1) await kv.expire(key, windowSeconds);
+    const count = await kv.eval(RATE_LIMIT_SCRIPT, [key], [windowSeconds]);
     if (count > limit) return json({ ok: false, code: 'RATE_LIMITED' }, 429, cors(req));
     return null;
   } catch {

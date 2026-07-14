@@ -10,6 +10,8 @@ assert.match(shared, /export async function rateLimit/);
 assert.match(shared, /Access-Control-Allow-Origin/);
 assert.match(shared, /\^\[a-z0-9_\]\{3,24\}\$/);
 assert.match(shared, /@vercel\/kv/);
+assert.match(shared, /kv\.eval\(/);
+assert.doesNotMatch(shared, /kv\.expire\(/);
 
 for (const route of ['register', 'login', 'password-reset']) {
   const source = read(`api/auth/${route}.mjs`);
@@ -20,5 +22,9 @@ for (const route of ['register', 'login', 'password-reset']) {
 
 assert.match(read('api/auth/login.mjs'), /signInWithPassword/);
 assert.match(read('api/auth/password-reset.mjs'), /resetPasswordForEmail/);
+
+const register = read('api/auth/register.mjs');
+assert.match(register, /data:\s*\{\s*username\s*\}/);
+assert.doesNotMatch(register, /\.from\('profiles'\)\.insert\(/);
 
 console.log('auth api contract passed');

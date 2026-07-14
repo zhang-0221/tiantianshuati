@@ -19,6 +19,32 @@ create table public.learning_snapshots (
   updated_at timestamptz not null default now()
 );
 
+-- This runs in the same transaction as auth.users creation. A failed profile
+-- insert (including a duplicate username) rolls back the auth user as well.
+create or replace function public.create_profile_for_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  requested_username text := lower(trim(coalesce(new.raw_user_meta_data ->> 'username', '')));
+begin
+  if requested_username !~ '^[a-z0-9_]{3,24}$' then
+    raise exception 'invalid username';
+  end if;
+
+  insert into public.profiles (id, username, email)
+  values (new.id, requested_username, new.email);
+  return new;
+end;
+$$;
+
+create trigger on_auth_user_created
+after insert on auth.users
+for each row
+execute function public.create_profile_for_new_user();
+
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
