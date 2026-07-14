@@ -833,9 +833,80 @@ textarea:focus{border-color:#8db4ff;box-shadow:0 0 0 4px rgba(37,99,235,.09);}
 @media(max-width:980px){.workspace-shell{padding:12px;gap:12px;}.sidebar{height:calc(100vh - 48px);}.app-main{min-height:calc(100vh - 48px);}}
 @media(max-width:768px){.study-page-content{grid-template-columns:1fr;}.study-side-note{display:none;}}
 @media(max-width:640px){.workspace-shell{display:block;padding:0;}.sidebar{border-radius:0;height:100vh;box-shadow:5px 0 28px rgba(16,32,57,.28);}.app-main{min-height:100vh;border:0;border-radius:0;box-shadow:none;}.hamburger{border-radius:12px;}.chat-toggle{bottom:28px;}.chat-panel.open ~ .chat-toggle{bottom:28px;}.study-page-head{display:block;}.study-page-head .btn{margin-top:15px;width:100%;}.study-page-title{font-size:26px;}.study-page-stats{gap:8px;}.study-stat{padding:13px 10px;}.study-stat b{font-size:20px;}.generation-controls{flex-direction:column;align-items:stretch!important;}.generation-controls .btn{width:100%;}.generation-controls label{padding:3px 0;}.gen-feedback{width:100%;margin-top:10px;}.gen-feedback-retry{margin-left:0;}}
+
+/* Account gate: a quiet landscape welcome before the learning workspace. */
+.auth-gate{position:fixed;inset:0;z-index:1000;display:flex;align-items:flex-end;justify-content:flex-end;padding:clamp(24px,5vw,78px);overflow:auto;background:#f8c6a8 url('assets/login-landscape.png') center/cover no-repeat;}
+.auth-gate::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,247,239,.14) 0%,rgba(255,247,239,.03) 48%,rgba(33,31,33,.22) 100%),linear-gradient(0deg,rgba(255,255,255,.62) 0%,rgba(255,255,255,0) 49%);pointer-events:none;}
+.auth-brand{position:absolute;z-index:1;top:clamp(22px,3vw,42px);left:clamp(24px,4vw,58px);display:flex;align-items:center;gap:10px;color:#162b4b;font-size:18px;font-weight:800;letter-spacing:.08em;text-shadow:0 1px 0 rgba(255,255,255,.5);}
+.auth-brand-mark{display:grid;place-items:center;width:32px;height:32px;border:1px solid rgba(22,43,75,.2);border-radius:11px;background:rgba(255,255,255,.54);font-size:17px;box-shadow:0 8px 22px rgba(65,68,71,.09);}
+.auth-card{position:relative;z-index:1;width:min(100%,410px);padding:30px;border:1px solid rgba(255,255,255,.72);border-radius:24px;background:rgba(255,255,255,.74);box-shadow:0 22px 60px rgba(59,54,47,.18),inset 0 1px 0 rgba(255,255,255,.72);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);}
+.auth-kicker{margin-bottom:5px;color:#2563eb;font-size:11px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;}
+.auth-card h2{margin:0;color:#15284a;font-size:28px;line-height:1.2;letter-spacing:-.04em;}
+.auth-copy{margin:8px 0 22px;color:#64748b;font-size:13px;line-height:1.7;}
+.auth-form{display:none;}.auth-form.active{display:block;}
+.auth-field{display:grid;gap:7px;margin:0 0 14px;color:#31466a;font-size:12px;font-weight:700;}
+.auth-field input{width:100%;height:46px;padding:0 13px;border:1px solid rgba(102,130,168,.28);border-radius:13px;outline:none;background:rgba(255,255,255,.76);color:#14294b;font:inherit;font-size:14px;font-weight:500;transition:border-color .18s,box-shadow .18s,background .18s;}
+.auth-field input::placeholder{color:#98a8bd;}.auth-field input:focus{border-color:#2563eb;background:#fff;box-shadow:0 0 0 4px rgba(37,99,235,.13);}
+.auth-submit{width:100%;min-height:48px;margin-top:4px;border:0;border-radius:14px;background:#2563eb;color:#fff;cursor:pointer;font:inherit;font-size:14px;font-weight:800;box-shadow:0 11px 20px rgba(37,99,235,.26);transition:transform .18s,background .18s,box-shadow .18s;}
+.auth-submit:hover{background:#1d4ed8;box-shadow:0 14px 26px rgba(37,99,235,.3);}.auth-submit:active{transform:translateY(1px);}
+.auth-links{display:flex;justify-content:space-between;gap:12px;margin-top:17px;}.auth-link{padding:0;border:0;background:transparent;color:#285fb7;cursor:pointer;font:inherit;font-size:12px;font-weight:700;}.auth-link:hover{text-decoration:underline;}
+.auth-status{min-height:20px;margin:14px 0 0;color:#506888;font-size:12px;line-height:1.55;}.auth-status:empty{display:none;}
+.auth-privacy{margin-top:19px;color:#8492a7;font-size:10px;line-height:1.55;}
+@media(max-width:640px){.auth-gate{align-items:flex-end;padding:72px 14px 16px;background-position:56% center;}.auth-gate::before{background:linear-gradient(180deg,rgba(255,250,245,.02) 0%,rgba(255,250,245,.16) 42%,rgba(255,255,255,.82) 100%);}.auth-brand{top:20px;left:20px;font-size:16px;}.auth-brand-mark{width:29px;height:29px;border-radius:10px;}.auth-card{width:100%;padding:24px 20px 21px;border-radius:22px;background:rgba(255,255,255,.94);box-shadow:0 16px 40px rgba(50,55,63,.2);backdrop-filter:blur(13px);}.auth-card h2{font-size:25px;}.auth-copy{margin-bottom:19px;}.auth-links{margin-top:15px;}.auth-privacy{margin-top:14px;}}
 </style>
 </head>
 <body>
+
+<!-- Account gate: forms are intentionally static until the session layer is wired. -->
+<section class="auth-gate" id="authGate" aria-labelledby="authGateTitle">
+  <div class="auth-brand" aria-label="喜刷刷">
+    <span class="auth-brand-mark" aria-hidden="true">✦</span><span>喜刷刷</span>
+  </div>
+  <div class="auth-card">
+    <p class="auth-kicker">YOUR LEARNING SPACE</p>
+    <form class="auth-form active" id="loginForm" onsubmit="return handleAuthGateSubmit(event)">
+      <h2 id="authGateTitle">欢迎回来</h2>
+      <p class="auth-copy">登录后继续管理你的题库与学习进度。</p>
+      <label class="auth-field" for="loginUsername">用户名
+        <input id="loginUsername" name="username" type="text" autocomplete="username" placeholder="输入用户名" required>
+      </label>
+      <label class="auth-field" for="loginPassword">密码
+        <input id="loginPassword" name="password" type="password" autocomplete="current-password" placeholder="输入密码" required>
+      </label>
+      <button class="auth-submit" type="submit">登录</button>
+      <div class="auth-links">
+        <button class="auth-link" id="forgotPasswordBtn" type="button" onclick="setAuthView('reset')">忘记密码？</button>
+        <button class="auth-link" type="button" onclick="setAuthView('register')">注册账号</button>
+      </div>
+    </form>
+    <form class="auth-form" id="registerForm" onsubmit="return handleAuthGateSubmit(event)">
+      <h2>创建账号</h2>
+      <p class="auth-copy">注册后，学习资料和进度将与账号关联。</p>
+      <label class="auth-field" for="registerUsername">用户名
+        <input id="registerUsername" name="username" type="text" autocomplete="username" placeholder="3–24 位字母、数字或下划线" required>
+      </label>
+      <label class="auth-field" for="registerEmail">邮箱
+        <input id="registerEmail" name="email" type="email" autocomplete="email" placeholder="用于验证和找回密码" required>
+      </label>
+      <label class="auth-field" for="registerPassword">设置密码
+        <input id="registerPassword" name="password" type="password" autocomplete="new-password" placeholder="至少 8 位" minlength="8" required>
+      </label>
+      <button class="auth-submit" type="submit">创建账号</button>
+      <div class="auth-links"><button class="auth-link" type="button" onclick="setAuthView('login')">已有账号？去登录</button></div>
+    </form>
+    <form class="auth-form" id="resetForm" onsubmit="return handleAuthGateSubmit(event)">
+      <h2>找回密码</h2>
+      <p class="auth-copy">输入注册邮箱，我们会发送重置密码的验证邮件。</p>
+      <label class="auth-field" for="resetEmail">注册邮箱
+        <input id="resetEmail" name="email" type="email" autocomplete="email" placeholder="输入注册邮箱" required>
+      </label>
+      <button class="auth-submit" type="submit">发送重置邮件</button>
+      <div class="auth-links"><button class="auth-link" type="button" onclick="setAuthView('login')">返回登录</button></div>
+    </form>
+    <p class="auth-status" id="authStatus" role="status" aria-live="polite"></p>
+    <p class="auth-privacy">你的学习数据将按账号隔离保存；DeepSeek API Key 始终只保存在当前设备。</p>
+  </div>
+</section>
 
 <div class="app workspace-shell">
 
@@ -1242,6 +1313,22 @@ function toast(msg, type) {
   el.textContent = msg;
   wrap.appendChild(el);
   setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .25s'; setTimeout(() => el.remove(), 250); }, 1800);
+}
+
+// The visual gate is ready before the account API/session layer is connected.
+function setAuthView(view) {
+  const forms = { login: 'loginForm', register: 'registerForm', reset: 'resetForm' };
+  Object.entries(forms).forEach(([name, id]) => document.getElementById(id).classList.toggle('active', name === view));
+  document.getElementById('authStatus').textContent = '';
+  const activeForm = document.getElementById(forms[view]);
+  const firstInput = activeForm && activeForm.querySelector('input');
+  if (firstInput) firstInput.focus();
+}
+
+function handleAuthGateSubmit(event) {
+  event.preventDefault();
+  document.getElementById('authStatus').textContent = '账号服务正在准备中，请稍后再试。';
+  return false;
 }
 
 function getGenerationFeedback(state, message, retryHandler) {
