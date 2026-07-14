@@ -1292,6 +1292,8 @@ const LS_AUTH_SESSION = 'ttsk_auth_session';
 const LS_LEARNING_SETTINGS = 'ttsk_learning_settings';
 const LS_MIGRATION_BUFFER = 'ttsk_pending_migration';
 const CLOUD_SYNC_DELAY = 900;
+const CLOUD_RETRY_LIMIT = 3;
+const CLOUD_RETRY_BASE_DELAY = 1200;
 const AUTH_CONFIG = window.TTSK_AUTH_CONFIG || null;
 const AUTH_GATE_ENABLED = Boolean(AUTH_CONFIG?.enableGate === true);
 const MAMMOTH_CDNS = [
@@ -1332,6 +1334,11 @@ let cloudSyncMigrationResolved = false;
 let cloudSyncMigrationPending = false;
 let cloudSyncAwaitingInitialCreate = false;
 let migrationContext = null;
+let activeLearningUserId = null;
+let authSessionGeneration = 0;
+let cloudRetryTimer = null;
+let cloudRetryAttempt = 0;
+let cloudSyncInFlightGeneration = null;
 
 // Recite state
 let reciteExamId = null;
@@ -1440,28 +1447,55 @@ function renderAccountMenu(user, fallbackUsername) {
 }
 
 function applyAuthenticatedSession(session, user, fallbackUsername) {
+  const previousSnapshot = buildLearningSnapshot();
+  const targetUserId = user.id;
+  const targetHasCache = hasLearningStorageForUser(targetUserId);
+  activeLearningUserId = targetUserId;
+  if (targetHasCache) {
+    loadLib();
+    loadVocabHistory();
+  } else {
+    library = [];
+    vocabHistory = [];
+  }
+  const initialSnapshot = targetHasCache ? buildLearningSnapshot() : previousSnapshot;
+  authSessionGeneration += 1;
+  clearTimeout(cloudSyncTimer);
+  cloudSyncTimer = null;
+  cloudSyncQueued = false;
+  cloudSyncInFlight = false;
+  cloudSyncInFlightGeneration = null;
+  resetCloudRetryState();
   authenticatedUser = user;
   const username = usernameForUser(user, fallbackUsername);
   saveAuthSession(session, username);
   renderAccountMenu(user, username);
-  beginInitialMigration();
+  beginInitialMigration(initialSnapshot);
 }
 
-function beginInitialMigration() {
+function beginInitialMigration(initialSnapshot) {
   setAuthGateActive(true);
   setAuthStatus('正在准备账号学习数据…');
+  const userId = authenticatedUser?.id;
+  if (userId && !getPendingMigrationSnapshot(userId)) {
+    savePendingMigrationSnapshot(userId, initialSnapshot || buildLearningSnapshot());
+  }
   void resolveInitialMigration().catch(() => setSyncStatus('同步暂不可用'));
 }
 
 function clearAuthenticatedSession() {
+  authSessionGeneration += 1;
   authenticatedUser = null;
   cloudSyncInitializedFor = null;
   clearTimeout(cloudSyncTimer);
   cloudSyncTimer = null;
   cloudSyncQueued = false;
+  cloudSyncInFlight = false;
+  cloudSyncInFlightGeneration = null;
   cloudSyncMigrationResolved = false;
   cloudSyncMigrationPending = false;
   cloudSyncAwaitingInitialCreate = false;
+  resetCloudRetryState();
   migrationContext = null;
   document.getElementById('migrationModal')?.classList.add('hidden');
   localStorage.removeItem(LS_AUTH_SESSION);
@@ -1658,9 +1692,30 @@ document.getElementById('resumeModal').addEventListener('click', function(e) { i
 var splitModalEl=document.getElementById('splitModal');if(splitModalEl)splitModalEl.addEventListener('click',function(e){if(e.target===splitModalEl)closeSplitModal();});
 
 // ==================== LIBRARY ====================
-function loadLib() { try { library = JSON.parse(localStorage.getItem(LS_LIB) || '[]'); } catch { library = []; } }
+function learningStorageKey(key, userId = activeLearningUserId) {
+  return userId ? key + ':' + userId : key;
+}
+
+function getLearningStorageItem(key, userId = activeLearningUserId) {
+  return localStorage.getItem(learningStorageKey(key, userId));
+}
+
+function setLearningStorageItem(key, value, userId = activeLearningUserId) {
+  localStorage.setItem(learningStorageKey(key, userId), value);
+}
+
+function removeLearningStorageItem(key, userId = activeLearningUserId) {
+  localStorage.removeItem(learningStorageKey(key, userId));
+}
+
+function hasLearningStorageForUser(userId) {
+  return [LS_LIB, LS_PROGRESS, LS_VOCAB, LS_LEARNING_SETTINGS]
+    .some(key => localStorage.getItem(learningStorageKey(key, userId)) !== null);
+}
+
+function loadLib() { try { library = JSON.parse(getLearningStorageItem(LS_LIB) || '[]'); } catch { library = []; } }
 loadLib();
-function saveLib() { localStorage.setItem(LS_LIB, JSON.stringify(library)); queueCloudSync(); }
+function saveLib() { setLearningStorageItem(LS_LIB, JSON.stringify(library)); queueCloudSync(); }
 
 function saveExam(name) {
   if (!activeExam || !activeExam.questions.length) return;
@@ -2083,7 +2138,7 @@ function renderStudyPageStats() {
 
 function renderWorkspaceStats() {
   let progress = { daily: {} };
-  try { progress = JSON.parse(localStorage.getItem(LS_PROGRESS) || '{"daily":{}}'); } catch {}
+  try { progress = JSON.parse(getLearningStorageItem(LS_PROGRESS) || '{"daily":{}}'); } catch {}
   const stats = getWorkspaceStats(library, progress, new Date().toISOString().slice(0, 10));
   const values = {
     statLibraryTotal: stats.libraryTotal,
@@ -3622,7 +3677,7 @@ function recordAnswer(isCorrect) {
   if (recordedAnswers.has(key)) return;
   recordedAnswers.add(key);
 
-  const raw = localStorage.getItem(LS_PROGRESS) || '{"daily":{},"byType":{}}';
+  const raw = getLearningStorageItem(LS_PROGRESS) || '{"daily":{},"byType":{}}';
   const progress = JSON.parse(raw);
   const today = new Date().toISOString().slice(0, 10);
 
@@ -3637,7 +3692,7 @@ function recordAnswer(isCorrect) {
     if (isCorrect) progress.byType[q.type].correct++;
   }
 
-  localStorage.setItem(LS_PROGRESS, JSON.stringify(progress));
+  setLearningStorageItem(LS_PROGRESS, JSON.stringify(progress));
   queueCloudSync();
 }
 
@@ -4684,10 +4739,10 @@ function nextReciteCard() {
 
 // ==================== VOCAB ====================
 function loadVocabHistory() {
-  try { vocabHistory = JSON.parse(localStorage.getItem(LS_VOCAB) || '[]'); } catch { vocabHistory = []; }
+  try { vocabHistory = JSON.parse(getLearningStorageItem(LS_VOCAB) || '[]'); } catch { vocabHistory = []; }
 }
 loadVocabHistory();
-function saveVocabHistory() { localStorage.setItem(LS_VOCAB, JSON.stringify(vocabHistory)); queueCloudSync(); }
+function saveVocabHistory() { setLearningStorageItem(LS_VOCAB, JSON.stringify(vocabHistory)); queueCloudSync(); }
 
 // ==================== ACCOUNT CLOUD SYNC ====================
 // Only learning data belongs in the cloud snapshot. API keys, chat messages,
@@ -4699,8 +4754,15 @@ function readStoredJSON(key, fallback) {
   } catch { return fallback; }
 }
 
+function readLearningStoredJSON(key, fallback, userId = activeLearningUserId) {
+  try {
+    const value = JSON.parse(getLearningStorageItem(key, userId) || '');
+    return value && typeof value === 'object' ? value : fallback;
+  } catch { return fallback; }
+}
+
 function readLearningProgress() {
-  const progress = readStoredJSON(LS_PROGRESS, { daily: {}, byType: {} });
+  const progress = readLearningStoredJSON(LS_PROGRESS, { daily: {}, byType: {} });
   return {
     daily: progress.daily && typeof progress.daily === 'object' ? progress.daily : {},
     byType: progress.byType && typeof progress.byType === 'object' ? progress.byType : {}
@@ -4708,7 +4770,7 @@ function readLearningProgress() {
 }
 
 function readLearningSettings() {
-  const settings = readStoredJSON(LS_LEARNING_SETTINGS, {});
+  const settings = readLearningStoredJSON(LS_LEARNING_SETTINGS, {});
   return !Array.isArray(settings) ? settings : {};
 }
 
@@ -4736,27 +4798,32 @@ function normalizeLearningSnapshot(snapshot) {
 }
 
 function getPendingMigrationSnapshot(userId) {
-  const buffer = readStoredJSON(LS_MIGRATION_BUFFER, null);
-  return buffer?.userId === userId ? normalizeLearningSnapshot(buffer.snapshot) : null;
+  try {
+    const buffer = JSON.parse(localStorage.getItem(migrationBufferKey(userId)) || 'null');
+    return buffer ? normalizeLearningSnapshot(buffer.snapshot) : null;
+  } catch { return null; }
+}
+
+function migrationBufferKey(userId) {
+  return LS_MIGRATION_BUFFER + ':' + userId;
 }
 
 function savePendingMigrationSnapshot(userId, snapshot) {
-  localStorage.setItem(LS_MIGRATION_BUFFER, JSON.stringify({ userId, snapshot: normalizeLearningSnapshot(snapshot) }));
+  localStorage.setItem(migrationBufferKey(userId), JSON.stringify({ snapshot: normalizeLearningSnapshot(snapshot) }));
 }
 
 function clearPendingMigrationSnapshot(userId) {
-  const buffer = readStoredJSON(LS_MIGRATION_BUFFER, null);
-  if (!buffer || buffer.userId === userId) localStorage.removeItem(LS_MIGRATION_BUFFER);
+  if (userId) localStorage.removeItem(migrationBufferKey(userId));
 }
 
 function applyLearningSnapshot(snapshot) {
   const next = normalizeLearningSnapshot(snapshot);
   library = next.library;
   vocabHistory = next.vocab_history;
-  localStorage.setItem(LS_LIB, JSON.stringify(next.library));
-  localStorage.setItem(LS_PROGRESS, JSON.stringify(next.progress));
-  localStorage.setItem(LS_VOCAB, JSON.stringify(next.vocab_history));
-  localStorage.setItem(LS_LEARNING_SETTINGS, JSON.stringify(next.settings));
+  setLearningStorageItem(LS_LIB, JSON.stringify(next.library));
+  setLearningStorageItem(LS_PROGRESS, JSON.stringify(next.progress));
+  setLearningStorageItem(LS_VOCAB, JSON.stringify(next.vocab_history));
+  setLearningStorageItem(LS_LEARNING_SETTINGS, JSON.stringify(next.settings));
   renderLib();
   renderStudyPageStats();
   if (document.getElementById('vocabHistory')) renderVocabHistory();
@@ -4917,24 +4984,54 @@ function queueCloudSync(delay = CLOUD_SYNC_DELAY) {
   cloudSyncTimer = setTimeout(() => { void flushCloudSync(); }, delay);
 }
 
+function resetCloudRetryState() {
+  clearTimeout(cloudRetryTimer);
+  cloudRetryTimer = null;
+  cloudRetryAttempt = 0;
+}
+
+function scheduleCloudRetry(kind, sessionGeneration = authSessionGeneration) {
+  if (!authenticatedUser?.id || sessionGeneration !== authSessionGeneration || cloudRetryAttempt >= CLOUD_RETRY_LIMIT) return;
+  const delay = CLOUD_RETRY_BASE_DELAY * (2 ** cloudRetryAttempt);
+  cloudRetryAttempt += 1;
+  clearTimeout(cloudRetryTimer);
+  cloudRetryTimer = setTimeout(() => {
+    if (sessionGeneration !== authSessionGeneration || !authenticatedUser?.id) return;
+    if (kind === 'migration' || cloudSyncMigrationPending) {
+      void resolveInitialMigration();
+    } else if (cloudSyncQueued) {
+      void flushCloudSync();
+    }
+  }, delay);
+}
+
 async function flushCloudSync() {
   if (!cloudSyncQueued || cloudSyncInFlight || !authenticatedUser?.id || !cloudSyncMigrationResolved || !navigator.onLine) return false;
   const client = getAuthClient();
   if (!client) return false;
+  const userId = authenticatedUser.id;
+  const sessionGeneration = authSessionGeneration;
   cloudSyncInFlight = true;
+  cloudSyncInFlightGeneration = sessionGeneration;
   cloudSyncQueued = false;
   setSyncStatus('正在同步…');
   const snapshot = buildLearningSnapshot();
   const { error } = await client.from('learning_snapshots').upsert({
-    user_id: authenticatedUser.id,
+    user_id: userId,
     ...snapshot
   }, { onConflict: 'user_id' });
-  cloudSyncInFlight = false;
+  if (cloudSyncInFlightGeneration === sessionGeneration) {
+    cloudSyncInFlight = false;
+    cloudSyncInFlightGeneration = null;
+  }
+  if (authSessionGeneration !== sessionGeneration || authenticatedUser?.id !== userId) return false;
   if (error) {
     cloudSyncQueued = true;
     setSyncStatus('同步失败，稍后重试');
+    scheduleCloudRetry('sync', sessionGeneration);
     return false;
   }
+  resetCloudRetryState();
   setSyncStatus('已同步');
   if (cloudSyncAwaitingInitialCreate) {
     cloudSyncAwaitingInitialCreate = false;
@@ -4954,6 +5051,7 @@ async function resolveInitialMigration() {
   const userId = authenticatedUser?.id;
   const client = getAuthClient();
   if (!userId || !client || cloudSyncInitializedFor === userId) return;
+  const sessionGeneration = authSessionGeneration;
   cloudSyncInitializedFor = userId;
   cloudSyncMigrationResolved = false;
   cloudSyncMigrationPending = true;
@@ -4965,14 +5063,17 @@ async function resolveInitialMigration() {
     .select('library, progress, vocab_history, settings')
     .eq('user_id', userId)
     .maybeSingle();
-  if (authenticatedUser?.id !== userId || cloudSyncInitializedFor !== userId) return;
+  if (authSessionGeneration !== sessionGeneration || authenticatedUser?.id !== userId || cloudSyncInitializedFor !== userId) return;
   if (error) {
     cloudSyncInitializedFor = null;
     cloudSyncMigrationPending = true;
     setAuthStatus('网络不可用，恢复网络后会继续准备学习数据。');
     setSyncStatus('同步暂不可用');
+    scheduleCloudRetry('migration', sessionGeneration);
     return;
   }
+
+  resetCloudRetryState();
 
   const cloudSnapshot = normalizeLearningSnapshot(data);
   const hasCloudData = hasLearningData(cloudSnapshot);
