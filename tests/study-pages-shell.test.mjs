@@ -11,6 +11,8 @@ for (const id of ['libraryPageStats', 'recitePageStats', 'vocabPageStats', 'mind
 for (const id of ['tabLibrary', 'tabRecite', 'tabVocab', 'tabMindmap']) {
   assert.ok(html.includes(`class="tab-content study-page" id="${id}"`), `${id} should use the shared page shell`);
 }
+assert.match(html, /class="empty-state study-empty"/, 'each shared page should use the study empty-state treatment');
+assert.match(html, /\.study-page-content\{grid-template-columns:1fr/, 'the mobile layout should collapse the study content column');
 
 function extractFunction(name) {
   const start = html.indexOf(`function ${name}`);
