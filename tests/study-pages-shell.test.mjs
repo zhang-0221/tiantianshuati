@@ -13,6 +13,9 @@ for (const id of ['tabLibrary', 'tabRecite', 'tabVocab', 'tabMindmap']) {
 }
 assert.match(html, /class="empty-state study-empty"/, 'each shared page should use the study empty-state treatment');
 assert.match(html, /\.study-page-content\{grid-template-columns:1fr/, 'the mobile layout should collapse the study content column');
+assert.doesNotMatch(html, /可背诵资料/, 'the library should not show an unhelpful recitation stat');
+assert.match(html, /getElementById\('libraryStudyLayout'\)\.style\.display = 'none'/, 'library chrome should hide while viewing details');
+assert.match(html, /DeepSeek API Key 无效或已过期/, 'chat should explain authentication failures clearly');
 
 function extractFunction(name) {
   const start = html.indexOf(`function ${name}`);
@@ -34,7 +37,7 @@ assert.deepEqual(JSON.parse(JSON.stringify(sandbox.getStudyPageStats([
   { questions: [{ type: 'short' }, { type: 'single' }], outline: [{ name: 'A' }] },
   { questions: [{ type: 'essay' }], outline: [] },
 ], [{ words: ['apple', 'banana'] }]))), {
-  library: [2, 3, 2],
+  library: [2, 3],
   recite: [2, 2, 0],
   vocab: [1, 2, 0],
   mind: [1, 1, 1],

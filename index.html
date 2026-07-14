@@ -822,7 +822,7 @@ textarea:focus{border-color:#8db4ff;box-shadow:0 0 0 4px rgba(37,99,235,.09);}
 .study-page-kicker{font-size:11px;letter-spacing:.08em;font-weight:800;color:#4c78ba;}
 .study-page-title{margin:4px 0 0;color:#10213e;font-size:30px;line-height:1.16;letter-spacing:-.06em;}
 .study-page-desc{margin:7px 0 0;color:var(--muted);font-size:13px;}
-.study-page-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 22px;}
+.study-page-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 22px;}.library-page-stats{grid-template-columns:repeat(2,minmax(0,1fr));}
 .study-stat{padding:15px 17px;border:1px solid #e3ebf6;border-radius:14px;background:#f8fbff;}
 .study-stat b{display:block;font-size:23px;line-height:1;color:#173f7d;}.study-stat span{display:block;margin-top:6px;font-size:11px;color:var(--muted);}
 .study-page-content{display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:16px;align-items:start;}
@@ -943,7 +943,7 @@ textarea:focus{border-color:#8db4ff;box-shadow:0 0 0 4px rgba(37,99,235,.09);}
         <div><div class="study-page-kicker">LEARNING LIBRARY</div><h2 class="study-page-title">我的题库</h2><p class="study-page-desc">集中管理资料、试卷与学习进度。</p></div>
         <button class="btn btn-p btn-sm" onclick="switchTab('import')">＋ 导入新资料</button>
       </header>
-      <div class="study-page-stats" id="libraryPageStats"></div>
+      <div class="study-page-stats library-page-stats" id="libraryPageStats"></div>
       <div class="study-page-content" id="libraryStudyLayout"><div class="study-page-main">
       <!-- 子视图：题库列表 -->
       <div id="libView">
@@ -1704,7 +1704,7 @@ function getStudyPageStats(exams, histories) {
   const outlineNodes = outlineExams.reduce((total, e) => total + countNodes(e.outline), 0);
   const words = stories.reduce((total, h) => total + ((h.words || []).length), 0);
   return {
-    library: [list.length, list.reduce((total, e) => total + (e.questions || []).length, 0), reciteExams.length],
+    library: [list.length, list.reduce((total, e) => total + (e.questions || []).length, 0)],
     recite: [reciteExams.length, reciteQuestions, 0],
     vocab: [stories.length, words, 0],
     mind: [outlineExams.length, outlineNodes, outlineExams.length],
@@ -1714,7 +1714,7 @@ function getStudyPageStats(exams, histories) {
 function renderStudyPageStats() {
   const stats = getStudyPageStats(library, vocabHistory);
   const labels = {
-    library: ['资料', '题目', '可背诵资料'],
+    library: ['资料', '题目'],
     recite: ['背诵资料', '大题', '今日复习'],
     vocab: ['短文', '累计单词', '待巩固'],
     mind: ['导图', '知识点', '已覆盖资料'],
@@ -1775,6 +1775,7 @@ let detailMode = null; // 'sequential' | 'random' | 'wrong'
 
 function showExamDetail(id) {
   const e = library.find(x => x.id === id); if (!e) return;
+  document.getElementById('libraryStudyLayout').style.display = 'none';
   detailExamId = id; detailMode = null;
   const submitted = e.isSubmitted || {}, correct = e.isCorrect || {};
   // Compute small-question (single/multiple/tf) stats for detail view
@@ -2023,6 +2024,7 @@ function startPractice(id, mode, reset) {
 
 // ==================== SUB-VIEW SWITCHING ====================
 function showLibView() {
+  document.getElementById('libraryStudyLayout').style.display = '';
   document.getElementById('libView').style.display = 'block';
   document.getElementById('detailView').style.display = 'none';
   document.getElementById('quizView').style.display = 'none';
@@ -2030,6 +2032,7 @@ function showLibView() {
 }
 
 function showQuizView() {
+  document.getElementById('libraryStudyLayout').style.display = 'none';
   document.getElementById('libView').style.display = 'none';
   document.getElementById('detailView').style.display = 'none';
   document.getElementById('quizView').style.display = 'block';
@@ -3335,7 +3338,8 @@ async function sendChat() {
     chatHistory.push({ role: 'assistant', content: reply.trim() });
   } catch (err) {
     hideTyping(typingEl);
-    const msg = err.message === 'TIMEOUT' ? '请求超时，请重试' : '出错了：' + err.message;
+    const isAuthError = /authentication fails|api key.*invalid|\b401\b/i.test(err.message || '');
+    const msg = isAuthError ? 'DeepSeek API Key 无效或已过期，请在左下角 API Key 中更新后重试。' : err.message === 'TIMEOUT' ? '请求超时，请重试' : '出错了：' + err.message;
     appendMsg('ai', msg);
   }
   sendBtn.disabled = false;
