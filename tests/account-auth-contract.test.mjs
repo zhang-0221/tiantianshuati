@@ -26,6 +26,8 @@ assert.doesNotMatch(html, /数据将按账号隔离保存/, 'the static shell mu
 
 assert.match(html, /const LS_AUTH_SESSION = 'ttsk_auth_session'/, 'authenticated sessions need a dedicated local storage key');
 assert.match(html, /cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@2\.57\.0/, 'the browser client must pin the Supabase CDN version');
+assert.match(html, /integrity="sha384-\/E7xfJz9bbCsrwJAbrt9CO5JB1REPVQjuSrQT4Cpz2BQBocDVsGLB2\/VMAEzYaf\+"/, 'the pinned Supabase SDK must have the reviewed SHA-384 integrity hash');
+assert.match(html, /crossorigin="anonymous"/, 'the SDK integrity check must use anonymous cross-origin mode');
 for (const fn of ['submitRegistration', 'submitLogin', 'submitPasswordReset', 'restoreSession', 'signOutAccount', 'apiFetch']) {
   assert.match(html, new RegExp(`(?:async )?function ${fn}\\(`), `missing browser auth function: ${fn}`);
 }
