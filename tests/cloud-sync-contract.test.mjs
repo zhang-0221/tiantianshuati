@@ -37,6 +37,10 @@ assert.match(html, /cloudRetryAttempt \+= 1/, 'scheduled retries must increase t
 assert.match(html, /clearTimeout\(cloudRetryTimer\)/, 'retry timers must be cancelled on account changes');
 const applySessionSource = html.match(/function applyAuthenticatedSession\([^)]*\) \{([\s\S]*?)\n\}/)?.[1] || '';
 assert.match(applySessionSource, /clearTimeout\(cloudSyncTimer\)/, 'a new authenticated account must cancel the previous account write timer');
+assert.match(html, /function clearAuthenticatedSession\([\s\S]*?activeLearningUserId = null/, 'logout must reset the active learning storage namespace');
+assert.match(html, /function consumeLegacyLearningSnapshot\(/, 'only the unauthenticated legacy cache may be used as an explicit migration source');
+assert.match(applySessionSource, /previousActiveUserId === targetUserId/, 'a prior in-memory snapshot may only be carried into the same account');
+assert.doesNotMatch(applySessionSource, /const previousSnapshot = buildLearningSnapshot\(\)/, 'a login must not blindly carry the previous account snapshot into a new account');
 assert.match(html, /function beginInitialMigration\([\s\S]*?setAuthGateActive\(true\)/, 'account switches must keep the neutral gate up before clearing the previous account cache');
 assert.match(html, /if \(error\) \{[\s\S]*?setAuthStatus\('网络不可用，恢复网络后会继续准备学习数据。'\)/, 'a failed initial fetch must remain a visible loading/retry state rather than expose the previous account');
 assert.match(html, /function resolveInitialMigration\([\s\S]*?const localSnapshot = getPendingMigrationSnapshot\(userId\)/, 'migration must read the isolated pending buffer instead of the newly-cleared active cache');

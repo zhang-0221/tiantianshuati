@@ -1447,9 +1447,11 @@ function renderAccountMenu(user, fallbackUsername) {
 }
 
 function applyAuthenticatedSession(session, user, fallbackUsername) {
-  const previousSnapshot = buildLearningSnapshot();
+  const previousActiveUserId = activeLearningUserId;
   const targetUserId = user.id;
   const targetHasCache = hasLearningStorageForUser(targetUserId);
+  const legacySnapshot = previousActiveUserId === null ? consumeLegacyLearningSnapshot() : null;
+  const previousSnapshot = previousActiveUserId === targetUserId ? buildLearningSnapshot() : null;
   activeLearningUserId = targetUserId;
   if (targetHasCache) {
     loadLib();
@@ -1458,7 +1460,7 @@ function applyAuthenticatedSession(session, user, fallbackUsername) {
     library = [];
     vocabHistory = [];
   }
-  const initialSnapshot = targetHasCache ? buildLearningSnapshot() : previousSnapshot;
+  const initialSnapshot = targetHasCache ? buildLearningSnapshot() : (previousSnapshot || legacySnapshot || emptyLearningSnapshot());
   authSessionGeneration += 1;
   clearTimeout(cloudSyncTimer);
   cloudSyncTimer = null;
@@ -1496,6 +1498,9 @@ function clearAuthenticatedSession() {
   cloudSyncMigrationPending = false;
   cloudSyncAwaitingInitialCreate = false;
   resetCloudRetryState();
+  activeLearningUserId = null;
+  library = [];
+  vocabHistory = [];
   migrationContext = null;
   document.getElementById('migrationModal')?.classList.add('hidden');
   localStorage.removeItem(LS_AUTH_SESSION);
@@ -4834,6 +4839,25 @@ function hasLearningData(snapshot) {
   return next.library.length > 0 || next.vocab_history.length > 0 ||
     Object.keys(next.progress.daily).length > 0 || Object.keys(next.progress.byType).length > 0 ||
     Object.keys(next.settings).length > 0;
+}
+
+function readLearningSnapshotForUser(userId) {
+  const read = (key, fallback) => {
+    try { return JSON.parse(getLearningStorageItem(key, userId) || JSON.stringify(fallback)); }
+    catch { return fallback; }
+  };
+  return normalizeLearningSnapshot({
+    library: read(LS_LIB, []),
+    progress: read(LS_PROGRESS, { daily: {}, byType: {} }),
+    vocab_history: read(LS_VOCAB, []),
+    settings: read(LS_LEARNING_SETTINGS, {})
+  });
+}
+
+function consumeLegacyLearningSnapshot() {
+  const snapshot = readLearningSnapshotForUser(null);
+  [LS_LIB, LS_PROGRESS, LS_VOCAB, LS_LEARNING_SETTINGS].forEach(key => removeLearningStorageItem(key, null));
+  return snapshot;
 }
 
 function mergeLibraries(cloudLibrary, localLibrary) {
