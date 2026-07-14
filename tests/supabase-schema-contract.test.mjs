@@ -26,6 +26,18 @@ assert.match(
   sql,
   /create table public\.learning_snapshots\s*\([\s\S]*?updated_at timestamptz not null default now\(\)/,
 );
+assert.match(
+  sql,
+  /create or replace function public\.set_updated_at\(\)\s+returns trigger\s+language plpgsql\s+as \$\$\s+begin\s+new\.updated_at := now\(\);\s+return new;\s+end;\s+\$\$/s,
+);
+assert.match(
+  sql,
+  /create trigger profiles_set_updated_at\s+before update on public\.profiles\s+for each row\s+execute function public\.set_updated_at\(\)/s,
+);
+assert.match(
+  sql,
+  /create trigger learning_snapshots_set_updated_at\s+before update on public\.learning_snapshots\s+for each row\s+execute function public\.set_updated_at\(\)/s,
+);
 assert.ok(sql.includes('alter table public.profiles enable row level security'));
 assert.ok(sql.includes('alter table public.learning_snapshots enable row level security'));
 assert.match(

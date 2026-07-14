@@ -19,6 +19,26 @@ create table public.learning_snapshots (
   updated_at timestamptz not null default now()
 );
 
+create or replace function public.set_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at := now();
+  return new;
+end;
+$$;
+
+create trigger profiles_set_updated_at
+before update on public.profiles
+for each row
+execute function public.set_updated_at();
+
+create trigger learning_snapshots_set_updated_at
+before update on public.learning_snapshots
+for each row
+execute function public.set_updated_at();
+
 alter table public.profiles enable row level security;
 alter table public.learning_snapshots enable row level security;
 
