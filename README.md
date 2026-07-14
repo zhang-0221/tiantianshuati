@@ -35,3 +35,9 @@
 
 - API Key 仅保存在你自己的浏览器中，不会上传
 - DeepSeek API 按量计费，生成一次试卷约消耗几千 tokens
+
+## 账号与云同步（可选）
+
+账号功能使用“用户名 + 密码”登录，将题库、答题记录、背诵进度与学习设置按账号同步到云端；首次登录会让用户选择如何迁移本机数据。完整的 Supabase、Vercel 和 GitHub Pages 配置见 [docs/ACCOUNT_SETUP.md](docs/ACCOUNT_SETUP.md)。
+
+DeepSeek API Key 不会与账号同步，始终只保存在当前浏览器。
