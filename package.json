@@ -2,7 +2,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node tests/study-pages-shell.test.mjs && node tests/dashboard-polish.test.mjs && node tests/general-chat.test.mjs && node tests/generation-feedback.test.mjs && node tests/mindmap-quality.test.mjs && node tests/ui-workspace-shell.test.mjs && node tests/account-auth-contract.test.mjs && node tests/auth-api-contract.test.mjs && node tests/supabase-schema-contract.test.mjs"
+    "test": "node --test tests/*.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.0",
