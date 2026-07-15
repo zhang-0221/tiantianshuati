@@ -20,8 +20,10 @@ assert.match(html, /function setAuthGateActive\(/, 'gate activation must have on
 assert.match(html, /workspace\.inert = active/, 'the learning workspace must be inert behind an active gate');
 assert.match(html, /workspace\.setAttribute\('aria-hidden', String\(active\)\)/, 'the learning workspace must be hidden from assistive technology behind an active gate');
 assert.match(html, /id="loginUsername"/, 'the login form needs a username field');
-assert.match(html, /id="registerEmail"/, 'registration must collect a recovery email');
-assert.match(html, /id="forgotPasswordBtn"/, 'password recovery must be reachable from login');
+assert.doesNotMatch(html, /id="registerEmail"/, 'registration must not ask for an email');
+assert.doesNotMatch(html, /id="verificationForm"/, 'registration must not show an OTP step');
+assert.doesNotMatch(html, /id="resetForm"/, 'pure username accounts must not expose email reset');
+assert.doesNotMatch(html, /resend-verification/, 'the browser must not call an email resend route');
 assert.match(html, /login-landscape\.webp/, 'the supplied landscape must use the optimized WebP background');
 assert.match(html, /class="auth-card/, 'the login form needs a dedicated glass card');
 assert.match(html, /\.auth-gate\{[^}]*align-items:center[^}]*justify-content:center/s, 'the login panel must stay centered over the landscape');
@@ -29,29 +31,8 @@ assert.match(html, /\.auth-card\{[^}]*background:rgba\(255,255,255,\.10\)/s, 'th
 assert.match(html, /\.auth-gate::after\{[^}]*bottom:0[^}]*height:28%/s, 'the lower source-image copy must be covered without whitening the centered glass panel');
 assert.doesNotMatch(html, /YOUR LEARNING SPACE/, 'the login surface should not introduce English copy over the Chinese experience');
 assert.match(html, /id="registerForm"/, 'registration must be available without leaving the gate');
-assert.match(html, /id="verificationForm"/, 'registration needs an email-code form');
-assert.match(html, /id="verificationEmail"/, 'the verification form must identify the target email');
-assert.match(html, /id="verificationCode"/, 'the verification form needs an eight-digit input');
-assert.match(html, /autocomplete="one-time-code"/, 'the verification input should support OTP autofill');
-assert.match(html, /maxlength="8"/, 'the verification input must accept Supabase\'s eight-digit token');
-assert.match(html, /pattern="\[0-9\]\{8\}"/, 'the verification input must validate an eight-digit token');
-assert.match(html, /\\d\{8\}/, 'client-side verification must accept the token length sent by email');
-assert.match(html, /function submitEmailVerification\(/, 'the browser must submit an email OTP');
-assert.match(html, /auth\.verifyOtp\(\{ email, token, type: 'email' \}\)/, 'the OTP must be verified by Supabase');
-assert.match(html, /function resendPendingVerification\(/, 'the verification form needs a resend action');
-assert.match(html, /id="resetForm"/, 'password reset must be available without leaving the gate');
-assert.match(html, /id="completeResetForm"/, 'a recovery redirect must lead to a form that can set a new password');
-assert.match(html, /id="recoveryPassword"/, 'the completed recovery flow needs a new-password field');
-assert.match(html, /id="recoveryPasswordConfirm"/, 'the completed recovery flow needs password confirmation');
-assert.match(html, /PASSWORD_RECOVERY/, 'Supabase password-recovery redirects must be recognized as recovery sessions');
-assert.match(html, /function isPasswordRecoveryRedirect\(/, 'the client must recognize recovery redirect parameters before restoring an older session');
-assert.match(html, /query\.get\('reset'\) === '1'[\s\S]*?query\.has\('code'\)/, 'PKCE recovery redirects must be recognized before an older local session is restored');
-assert.match(html, /auth\.updateUser\(\{ password/, 'the completed recovery form must update the password through Supabase');
-assert.match(html, /function submitNewPassword\(/, 'the completed recovery form needs a submission handler');
-assert.match(html, /id="resendVerificationBtn"/, 'unverified login feedback needs an explicit resend control');
-assert.match(html, /function resendVerification\(/, 'the resend-verification control needs a handler');
-assert.match(html, /\/api\/auth\/resend-verification/, 'the browser must call the safe resend-verification endpoint');
-assert.match(html, /EMAIL_UNVERIFIED/, 'the browser must give an explicit status for verified-password but unconfirmed-email logins');
+assert.match(html, /apiFetch\('\/api\/auth\/register', \{ username, password \}\)/, 'registration must send only username and password');
+assert.match(html, /!data\?\.session\?\.access_token/, 'registration must require a returned login session');
 assert.match(html, /@media\(max-width:640px\)[\s\S]*?\.auth-card/, 'the auth card requires a mobile layout');
 assert.match(html, /<h1 id="authGateTitle">喜刷刷账号<\/h1>/, 'the gate needs a stable accessible title');
 assert.match(html, /\.auth-gate\{[^}]*z-index:3000/s, 'the gate must visually sit above application toasts and dialogs');
@@ -61,13 +42,14 @@ assert.match(html, /const LS_AUTH_SESSION = 'ttsk_auth_session'/, 'authenticated
 assert.match(html, /cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@2\.57\.0/, 'the browser client must pin the Supabase CDN version');
 assert.match(html, /integrity="sha384-\/E7xfJz9bbCsrwJAbrt9CO5JB1REPVQjuSrQT4Cpz2BQBocDVsGLB2\/VMAEzYaf\+"/, 'the pinned Supabase SDK must have the reviewed SHA-384 integrity hash');
 assert.match(html, /crossorigin="anonymous"/, 'the SDK integrity check must use anonymous cross-origin mode');
-for (const fn of ['submitRegistration', 'submitLogin', 'submitPasswordReset', 'restoreSession', 'signOutAccount', 'apiFetch']) {
+for (const fn of ['submitRegistration', 'submitLogin', 'restoreSession', 'signOutAccount', 'apiFetch']) {
   assert.match(html, new RegExp(`(?:async )?function ${fn}\\(`), `missing browser auth function: ${fn}`);
 }
 assert.match(html, /auth\.setSession\(/, 'stored sessions must be restored through Supabase');
 assert.match(html, /auth\.getUser\(/, 'restored sessions must verify the current user');
 assert.match(html, /auth\.signOut\(/, 'logout must invalidate the Supabase session');
 assert.match(html, /auth\.onAuthStateChange\(/, 'token refreshes must keep the local session current');
+assert.doesNotMatch(html, /EMAIL_UNVERIFIED/, 'the direct-account UI must not require email confirmation');
 assert.match(html, /access_token/, 'the session contract must use access tokens, never passwords');
 assert.match(html, /localStorage\.removeItem\(LS_AUTH_SESSION\)/, 'logout must clear the locally stored session');
 assert.doesNotMatch(html, /localStorage\.setItem\([^\n]*password/i, 'passwords must never be written to local storage');

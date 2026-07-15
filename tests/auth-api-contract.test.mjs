@@ -14,7 +14,7 @@ assert.match(shared, /kv\.eval\(/);
 assert.doesNotMatch(shared, /kv\.expire\(/);
 assert.match(shared, /localRateLimit/, 'a free Vercel deployment must keep a conservative fallback when KV is unavailable');
 
-for (const route of ['register', 'login', 'password-reset', 'resend-verification']) {
+for (const route of ['register', 'login']) {
   const source = read(`api/auth/${route}.mjs`);
   assert.match(source, /req\.method !== 'POST'/);
   assert.match(source, /SUPABASE_SERVICE_ROLE_KEY/);
@@ -22,17 +22,13 @@ for (const route of ['register', 'login', 'password-reset', 'resend-verification
 }
 
 assert.match(read('api/auth/login.mjs'), /signInWithPassword/);
-assert.match(read('api/auth/login.mjs'), /EMAIL_UNVERIFIED/, 'an otherwise valid login must distinguish an unverified email');
-assert.match(read('api/auth/login.mjs'), /email[_\s-]?not[_\s-]?confirmed|email not confirmed/i, 'the login route must only classify Supabase\'s explicit unconfirmed-email error');
-assert.match(read('api/auth/password-reset.mjs'), /resetPasswordForEmail/);
-
-const resendVerification = read('api/auth/resend-verification.mjs');
-assert.match(resendVerification, /auth\.resend\(/, 'unverified users need a safe way to request another verification email');
-assert.match(resendVerification, /type:\s*['"]signup['"]/, 'the resend route must only send signup verification emails');
-assert.match(resendVerification, /return json\(\{ ok: true \}/, 'the resend route must not reveal whether a username exists');
 
 const register = read('api/auth/register.mjs');
-assert.match(register, /data:\s*\{\s*username\s*\}/);
+assert.match(register, /internalEmailForUsername\(username\)/);
+assert.match(register, /service\.auth\.admin\.createUser\(/);
+assert.match(register, /email_confirm:\s*true/);
+assert.match(register, /anonymous\.auth\.signInWithPassword/);
+assert.doesNotMatch(register, /auth\.signUp\(/);
 assert.doesNotMatch(register, /\.from\('profiles'\)\.insert\(/);
 
 console.log('auth api contract passed');
