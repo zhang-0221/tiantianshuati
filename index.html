@@ -880,10 +880,8 @@ textarea:focus{border-color:#8db4ff;box-shadow:0 0 0 4px rgba(37,99,235,.09);}
       </label>
       <button class="auth-submit" type="submit">登录</button>
       <div class="auth-links">
-        <button class="auth-link" id="forgotPasswordBtn" type="button" onclick="setAuthView('reset')">忘记密码？</button>
         <button class="auth-link" type="button" onclick="setAuthView('register')">注册账号</button>
       </div>
-      <div class="auth-links" id="resendVerificationWrap" hidden><button class="auth-link" id="resendVerificationBtn" type="button" onclick="resendVerification()">重新发送验证邮件</button></div>
     </form>
     <form class="auth-form" id="registerForm" onsubmit="return submitRegistration(event)">
       <h2>创建账号</h2>
@@ -891,50 +889,11 @@ textarea:focus{border-color:#8db4ff;box-shadow:0 0 0 4px rgba(37,99,235,.09);}
       <label class="auth-field" for="registerUsername">用户名
         <input id="registerUsername" name="username" type="text" autocomplete="username" placeholder="3–24 位字母、数字或下划线" required>
       </label>
-      <label class="auth-field" for="registerEmail">邮箱
-        <input id="registerEmail" name="email" type="email" autocomplete="email" placeholder="用于验证和找回密码" required>
-      </label>
       <label class="auth-field" for="registerPassword">设置密码
         <input id="registerPassword" name="password" type="password" autocomplete="new-password" placeholder="至少 8 位" minlength="8" required>
       </label>
       <button class="auth-submit" type="submit">创建账号</button>
       <div class="auth-links"><button class="auth-link" type="button" onclick="setAuthView('login')">已有账号？去登录</button></div>
-    </form>
-    <form class="auth-form" id="verificationForm" onsubmit="return submitEmailVerification(event)">
-      <h2>验证邮箱</h2>
-      <p class="auth-copy">请输入发送至邮箱的 8 位验证码，验证后即可开始使用。</p>
-      <label class="auth-field" for="verificationEmail">注册邮箱
-        <input id="verificationEmail" name="email" type="email" autocomplete="email" placeholder="输入注册时填写的邮箱" required>
-      </label>
-      <label class="auth-field" for="verificationCode">验证码
-        <input id="verificationCode" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="8" pattern="[0-9]{8}" placeholder="输入 8 位验证码" required>
-      </label>
-      <button class="auth-submit" type="submit">完成验证</button>
-      <div class="auth-links">
-        <button class="auth-link" type="button" onclick="resendPendingVerification()">重新发送验证码</button>
-        <button class="auth-link" type="button" onclick="setAuthView('login')">返回登录</button>
-      </div>
-    </form>
-    <form class="auth-form" id="resetForm" onsubmit="return submitPasswordReset(event)">
-      <h2>找回密码</h2>
-      <p class="auth-copy">输入注册用户名，我们会向绑定邮箱发送重置密码邮件。</p>
-      <label class="auth-field" for="resetUsername">用户名
-        <input id="resetUsername" name="username" type="text" autocomplete="username" placeholder="输入注册时的用户名" required>
-      </label>
-      <button class="auth-submit" type="submit">发送重置邮件</button>
-      <div class="auth-links"><button class="auth-link" type="button" onclick="setAuthView('login')">返回登录</button></div>
-    </form>
-    <form class="auth-form" id="completeResetForm" onsubmit="return submitNewPassword(event)">
-      <h2>设置新密码</h2>
-      <p class="auth-copy">验证通过后，请设置一个至少 8 位的新密码。</p>
-      <label class="auth-field" for="recoveryPassword">新密码
-        <input id="recoveryPassword" name="password" type="password" autocomplete="new-password" placeholder="至少 8 位" minlength="8" required>
-      </label>
-      <label class="auth-field" for="recoveryPasswordConfirm">确认新密码
-        <input id="recoveryPasswordConfirm" name="password-confirmation" type="password" autocomplete="new-password" placeholder="再次输入新密码" minlength="8" required>
-      </label>
-      <button class="auth-submit" type="submit">保存新密码</button>
-      <div class="auth-links"><button class="auth-link" type="button" onclick="setAuthView('login')">返回登录</button></div>
     </form>
     <p class="auth-status" id="authStatus" role="status" aria-live="polite"></p>
     <p class="auth-privacy">账号服务配置完成后才会启用同步；DeepSeek API Key 始终只保存在当前设备。</p>
@@ -1367,8 +1326,6 @@ let authSessionGeneration = 0;
 let cloudRetryTimer = null;
 let cloudRetryAttempt = 0;
 let cloudSyncInFlightGeneration = null;
-let passwordRecoveryActive = false;
-let pendingVerification = null;
 
 // Recite state
 let reciteExamId = null;
@@ -1411,10 +1368,8 @@ function toast(msg, type) {
 }
 
 function setAuthView(view) {
-  const forms = { login: 'loginForm', register: 'registerForm', verification: 'verificationForm', reset: 'resetForm', completeReset: 'completeResetForm' };
+  const forms = { login: 'loginForm', register: 'registerForm' };
   Object.entries(forms).forEach(([name, id]) => document.getElementById(id).classList.toggle('active', name === view));
-  if (view === 'login') pendingVerification = null;
-  document.getElementById('resendVerificationWrap').hidden = true;
   document.getElementById('authStatus').textContent = '';
   const activeForm = document.getElementById(forms[view]);
   const firstInput = activeForm && activeForm.querySelector('input');
@@ -1423,31 +1378,6 @@ function setAuthView(view) {
 
 function setAuthStatus(message) {
   document.getElementById('authStatus').textContent = message || '';
-}
-
-function isPasswordRecoveryRedirect() {
-  const query = new URLSearchParams(window.location.search);
-  const fragment = new URLSearchParams(window.location.hash.replace(/^#/, ''));
-  return query.get('type') === 'recovery'
-    || fragment.get('type') === 'recovery'
-    || (query.get('reset') === '1' && query.has('code'));
-}
-
-function clearPasswordRecoveryRedirect() {
-  if (!window.history?.replaceState) return;
-  const url = new URL(window.location.href);
-  url.searchParams.delete('reset');
-  url.searchParams.delete('type');
-  url.searchParams.delete('code');
-  url.hash = '';
-  window.history.replaceState({}, document.title, url.pathname + url.search);
-}
-
-function beginPasswordRecovery() {
-  passwordRecoveryActive = true;
-  setAuthGateActive(true);
-  setAuthView('completeReset');
-  setAuthStatus('请设置一个新的登录密码。');
 }
 
 function hasAuthRuntime() {
@@ -1565,22 +1495,12 @@ function clearAuthenticatedSession() {
 }
 
 function showAuthFailure(code, context = {}) {
-  const resendWrap = document.getElementById('resendVerificationWrap');
   const messages = {
     INVALID_CREDENTIALS: '用户名或密码不正确，请重试。',
-    EMAIL_UNVERIFIED: '邮箱尚未验证。请先完成验证后再登录。',
     USERNAME_TAKEN: '该用户名已被使用，请换一个。',
-    INVALID_INPUT: '请检查用户名、邮箱和密码格式。',
+    INVALID_INPUT: '请检查用户名和密码格式。',
     RATE_LIMITED: '操作过于频繁，请稍后再试。'
   };
-  resendWrap.hidden = code !== 'EMAIL_UNVERIFIED';
-  if (code === 'EMAIL_UNVERIFIED' && context.username) {
-    pendingVerification = { username: context.username, email: '' };
-    const emailInput = document.getElementById('verificationEmail');
-    emailInput.value = '';
-    emailInput.readOnly = false;
-    setAuthView('verification');
-  }
   setAuthStatus(messages[code] || '账号服务暂不可用，请稍后再试。');
 }
 
@@ -1612,133 +1532,31 @@ async function submitLogin(event) {
 async function submitRegistration(event) {
   event.preventDefault();
   const username = document.getElementById('registerUsername').value.trim();
-  const email = document.getElementById('registerEmail').value.trim();
   const password = document.getElementById('registerPassword').value;
-  if (!username || !email || !password) return false;
+  if (!username || !password) return false;
   setAuthStatus('正在创建账号…');
   try {
-    const { response, data } = await apiFetch('/api/auth/register', { username, email, password });
-    if (!response.ok || !data?.ok) { showAuthFailure(data?.code); return false; }
+    const { response, data } = await apiFetch('/api/auth/register', { username, password });
+    if (!response.ok || !data?.session?.access_token) { showAuthFailure(data?.code); return false; }
+    const client = getAuthClient();
+    if (!client) { setAuthStatus('账号服务配置不完整，请联系管理员。'); return false; }
+    const restored = await client.auth.setSession({
+      access_token: data.session.access_token,
+      refresh_token: data.session.refresh_token
+    });
+    const userResult = await client.auth.getUser();
+    if (restored.error || !restored.data.session || userResult.error || !userResult.data.user) {
+      setAuthStatus('账号创建成功，但登录会话创建失败，请使用用户名和密码重新登录。');
+      return false;
+    }
     document.getElementById('registerPassword').value = '';
-    pendingVerification = { username, email };
-    const emailInput = document.getElementById('verificationEmail');
-    emailInput.value = email;
-    emailInput.readOnly = true;
-    document.getElementById('verificationCode').value = '';
-    setAuthView('verification');
-    setAuthStatus('验证码已发送，请查收邮箱。');
+    applyAuthenticatedSession(restored.data.session, userResult.data.user, username);
+    setAuthStatus('');
   } catch { setAuthStatus('账号服务暂不可用，请稍后再试。'); }
   return false;
 }
 
-async function submitEmailVerification(event) {
-  event.preventDefault();
-  const email = document.getElementById('verificationEmail').value.trim().toLowerCase();
-  const token = document.getElementById('verificationCode').value.trim();
-  const username = pendingVerification?.username || '';
-  if (!email || !/^\d{8}$/.test(token)) {
-    setAuthStatus('请输入注册邮箱和 8 位验证码。');
-    return false;
-  }
-  const client = getAuthClient();
-  if (!client) {
-    setAuthStatus('账号服务暂不可用，请稍后再试。');
-    return false;
-  }
-  setAuthStatus('正在验证邮箱…');
-  try {
-    const verified = await client.auth.verifyOtp({ email, token, type: 'email' });
-    if (verified.error || !verified.data.session || !verified.data.user) {
-      setAuthStatus('验证码无效或已过期，请重新发送。');
-      return false;
-    }
-    pendingVerification = null;
-    document.getElementById('verificationCode').value = '';
-    applyAuthenticatedSession(verified.data.session, verified.data.user, username);
-    setAuthStatus('');
-  } catch {
-    setAuthStatus('账号服务暂不可用，请稍后再试。');
-  }
-  return false;
-}
-
-async function resendPendingVerification() {
-  const username = pendingVerification?.username;
-  if (!username) {
-    setAuthStatus('请先通过注册或登录确认需要验证的账号。');
-    return;
-  }
-  setAuthStatus('正在重新发送验证码…');
-  try { await apiFetch('/api/auth/resend-verification', { username }); } catch {}
-  setAuthStatus('验证码已重新发送，请查收邮箱。');
-}
-
-async function submitPasswordReset(event) {
-  event.preventDefault();
-  const username = document.getElementById('resetUsername').value.trim();
-  if (!username) return false;
-  setAuthStatus('正在处理请求…');
-  try { await apiFetch('/api/auth/password-reset', { username }); } catch {}
-  setAuthStatus('如果账号存在，重置密码邮件将发送到绑定邮箱。');
-  return false;
-}
-
-async function resendVerification() {
-  const username = document.getElementById('loginUsername').value.trim();
-  if (!username) {
-    setAuthStatus('请先输入需要验证的用户名。');
-    return;
-  }
-  setAuthStatus('正在发送验证邮件…');
-  try { await apiFetch('/api/auth/resend-verification', { username }); } catch {}
-  setAuthStatus('如果该账号需要邮箱验证，验证邮件将发送到绑定邮箱。');
-}
-
-async function submitNewPassword(event) {
-  event.preventDefault();
-  const password = document.getElementById('recoveryPassword').value;
-  const confirmation = document.getElementById('recoveryPasswordConfirm').value;
-  if (password.length < 8) {
-    setAuthStatus('新密码至少需要 8 位。');
-    return false;
-  }
-  if (password !== confirmation) {
-    setAuthStatus('两次输入的密码不一致。');
-    return false;
-  }
-  if (!passwordRecoveryActive) {
-    setAuthStatus('重置链接无效或已过期，请重新发送重置邮件。');
-    return false;
-  }
-  const client = getAuthClient();
-  if (!client) {
-    setAuthStatus('账号服务暂不可用，请稍后再试。');
-    return false;
-  }
-  setAuthStatus('正在保存新密码…');
-  try {
-    const updated = await client.auth.updateUser({ password });
-    if (updated.error) {
-      setAuthStatus('重置链接无效或已过期，请重新发送重置邮件。');
-      return false;
-    }
-    document.getElementById('recoveryPassword').value = '';
-    document.getElementById('recoveryPasswordConfirm').value = '';
-    passwordRecoveryActive = false;
-    clearPasswordRecoveryRedirect();
-    try { await client.auth.signOut(); } catch {}
-    clearAuthenticatedSession();
-    setAuthGateActive(AUTH_GATE_ENABLED);
-    setAuthView('login');
-    setAuthStatus('密码已重置，请使用新密码登录。');
-  } catch {
-    setAuthStatus('账号服务暂不可用，请稍后再试。');
-  }
-  return false;
-}
-
 async function restoreSession() {
-  if (passwordRecoveryActive || isPasswordRecoveryRedirect()) return null;
   const client = getAuthClient();
   if (!client) {
     setAuthGateActive(AUTH_GATE_ENABLED);
@@ -1787,16 +1605,7 @@ function initializeAuth() {
     return;
   }
   setAuthGateActive(AUTH_GATE_ENABLED);
-  if (isPasswordRecoveryRedirect()) beginPasswordRecovery();
   authStateSubscription = client.auth.onAuthStateChange((event, session) => {
-    if (event === 'PASSWORD_RECOVERY' && session) {
-      beginPasswordRecovery();
-      return;
-    }
-    if (event === 'SIGNED_IN' && session && isPasswordRecoveryRedirect()) {
-      beginPasswordRecovery();
-      return;
-    }
     if (event === 'SIGNED_OUT' || !session) {
       clearAuthenticatedSession();
       setAuthGateActive(AUTH_GATE_ENABLED);
@@ -1807,7 +1616,6 @@ function initializeAuth() {
       saveAuthSession(session, usernameForUser(authenticatedUser, username));
     }
   });
-  if (passwordRecoveryActive) return;
   restoreSession();
 }
 
