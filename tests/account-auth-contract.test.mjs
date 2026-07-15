@@ -17,6 +17,10 @@ assert.match(html, /id="registerEmail"/, 'registration must collect a recovery e
 assert.match(html, /id="forgotPasswordBtn"/, 'password recovery must be reachable from login');
 assert.match(html, /login-landscape\.webp/, 'the supplied landscape must use the optimized WebP background');
 assert.match(html, /class="auth-card/, 'the login form needs a dedicated glass card');
+assert.match(html, /\.auth-gate\{[^}]*align-items:center[^}]*justify-content:center/s, 'the login panel must stay centered over the landscape');
+assert.match(html, /\.auth-card\{[^}]*background:rgba\(255,255,255,\.70\)/s, 'the centered login panel must use a 70% white glass surface');
+assert.match(html, /\.auth-gate::after\{[^}]*bottom:0[^}]*height:38%/s, 'the lower source-image copy must be covered by a dedicated backdrop mask');
+assert.doesNotMatch(html, /YOUR LEARNING SPACE/, 'the login surface should not introduce English copy over the Chinese experience');
 assert.match(html, /id="registerForm"/, 'registration must be available without leaving the gate');
 assert.match(html, /id="resetForm"/, 'password reset must be available without leaving the gate');
 assert.match(html, /id="completeResetForm"/, 'a recovery redirect must lead to a form that can set a new password');
