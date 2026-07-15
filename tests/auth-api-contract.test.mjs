@@ -4,6 +4,9 @@ import fs from 'node:fs';
 const root = new URL('../', import.meta.url);
 const read = (path) => fs.readFileSync(new URL(path, root), 'utf8');
 
+assert.equal(fs.existsSync(new URL('../api/auth/password-reset.mjs', import.meta.url)), false);
+assert.equal(fs.existsSync(new URL('../api/auth/resend-verification.mjs', import.meta.url)), false);
+
 const shared = read('api/auth/_shared.mjs');
 assert.match(shared, /export function normalizeUsername/);
 assert.match(shared, /export async function rateLimit/);
