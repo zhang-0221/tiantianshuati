@@ -12,6 +12,7 @@ assert.match(shared, /\^\[a-z0-9_\]\{3,24\}\$/);
 assert.match(shared, /@vercel\/kv/);
 assert.match(shared, /kv\.eval\(/);
 assert.doesNotMatch(shared, /kv\.expire\(/);
+assert.match(shared, /localRateLimit/, 'a free Vercel deployment must keep a conservative fallback when KV is unavailable');
 
 for (const route of ['register', 'login', 'password-reset', 'resend-verification']) {
   const source = read(`api/auth/${route}.mjs`);

@@ -2,8 +2,15 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+const publicConfig = fs.readFileSync(new URL('../auth-config.js', import.meta.url), 'utf8');
 
 assert.match(html, /const LS_KEY = 'ttsk_ds_key'/);
+assert.match(html, /<script src="\.\/auth-config\.js"><\/script>/, 'the deployed static shell must load the public auth configuration before app code');
+assert.match(publicConfig, /enableGate:\s*true/, 'the production public configuration must enable the account gate');
+assert.match(publicConfig, /supabaseUrl:/, 'the public configuration must identify the Supabase project');
+assert.match(publicConfig, /supabaseAnonKey:/, 'the browser must receive only its publishable Supabase credential');
+assert.match(publicConfig, /apiBase:/, 'the browser must use the deployed auth API');
+assert.doesNotMatch(publicConfig, /service[_-]?role|serviceRole|SUPABASE_SERVICE_ROLE_KEY/i, 'a private Supabase key must never enter the public configuration');
 assert.match(html, /const AUTH_CONFIG = window\.TTSK_AUTH_CONFIG/);
 assert.doesNotMatch(html, /service[_-]?role|serviceRole|SUPABASE_SERVICE_ROLE_KEY/i);
 assert.match(html, /id="authGate"/, 'the learning workspace should be protected by an account gate');

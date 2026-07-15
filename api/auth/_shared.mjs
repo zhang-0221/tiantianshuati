@@ -8,6 +8,18 @@ const RATE_LIMIT_SCRIPT = `
   end
   return count
 `;
+const memoryRateLimits = new Map();
+
+function localRateLimit(key, limit, windowSeconds) {
+  const now = Date.now();
+  const current = memoryRateLimits.get(key);
+  const expiresAt = now + windowSeconds * 1000;
+  const entry = !current || current.expiresAt <= now
+    ? { count: 1, expiresAt }
+    : { count: current.count + 1, expiresAt: current.expiresAt };
+  memoryRateLimits.set(key, entry);
+  return entry.count > limit;
+}
 
 export function normalizeUsername(value) {
   const username = typeof value === 'string' ? value.trim().toLowerCase() : '';
@@ -68,6 +80,11 @@ export async function rateLimit(req, route, limit = 10, windowSeconds = 60) {
     if (count > limit) return json({ ok: false, code: 'RATE_LIMITED' }, 429, cors(req));
     return null;
   } catch {
-    return json({ ok: false, code: 'AUTH_UNAVAILABLE' }, 503, cors(req));
+    // Vercel KV is no longer provisioned automatically for new free projects.
+    // Keep a conservative per-instance limit so login is still available while
+    // a managed Redis integration is not configured.
+    return localRateLimit(key, limit, windowSeconds)
+      ? json({ ok: false, code: 'RATE_LIMITED' }, 429, cors(req))
+      : null;
   }
 }
