@@ -902,12 +902,12 @@ textarea:focus{border-color:#8db4ff;box-shadow:0 0 0 4px rgba(37,99,235,.09);}
     </form>
     <form class="auth-form" id="verificationForm" onsubmit="return submitEmailVerification(event)">
       <h2>验证邮箱</h2>
-      <p class="auth-copy">请输入发送至邮箱的 6 位验证码，验证后即可开始使用。</p>
+      <p class="auth-copy">请输入发送至邮箱的 8 位验证码，验证后即可开始使用。</p>
       <label class="auth-field" for="verificationEmail">注册邮箱
         <input id="verificationEmail" name="email" type="email" autocomplete="email" placeholder="输入注册时填写的邮箱" required>
       </label>
       <label class="auth-field" for="verificationCode">验证码
-        <input id="verificationCode" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="输入 6 位验证码" required>
+        <input id="verificationCode" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="8" pattern="[0-9]{8}" placeholder="输入 8 位验证码" required>
       </label>
       <button class="auth-submit" type="submit">完成验证</button>
       <div class="auth-links">
@@ -1636,8 +1636,8 @@ async function submitEmailVerification(event) {
   const email = document.getElementById('verificationEmail').value.trim().toLowerCase();
   const token = document.getElementById('verificationCode').value.trim();
   const username = pendingVerification?.username || '';
-  if (!email || !/^\d{6}$/.test(token)) {
-    setAuthStatus('请输入注册邮箱和 6 位验证码。');
+  if (!email || !/^\d{8}$/.test(token)) {
+    setAuthStatus('请输入注册邮箱和 8 位验证码。');
     return false;
   }
   const client = getAuthClient();

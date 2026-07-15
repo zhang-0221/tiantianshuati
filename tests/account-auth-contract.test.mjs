@@ -31,8 +31,11 @@ assert.doesNotMatch(html, /YOUR LEARNING SPACE/, 'the login surface should not i
 assert.match(html, /id="registerForm"/, 'registration must be available without leaving the gate');
 assert.match(html, /id="verificationForm"/, 'registration needs an email-code form');
 assert.match(html, /id="verificationEmail"/, 'the verification form must identify the target email');
-assert.match(html, /id="verificationCode"/, 'the verification form needs a six-digit input');
+assert.match(html, /id="verificationCode"/, 'the verification form needs an eight-digit input');
 assert.match(html, /autocomplete="one-time-code"/, 'the verification input should support OTP autofill');
+assert.match(html, /maxlength="8"/, 'the verification input must accept Supabase\'s eight-digit token');
+assert.match(html, /pattern="\[0-9\]\{8\}"/, 'the verification input must validate an eight-digit token');
+assert.match(html, /\\d\{8\}/, 'client-side verification must accept the token length sent by email');
 assert.match(html, /function submitEmailVerification\(/, 'the browser must submit an email OTP');
 assert.match(html, /auth\.verifyOtp\(\{ email, token, type: 'email' \}\)/, 'the OTP must be verified by Supabase');
 assert.match(html, /function resendPendingVerification\(/, 'the verification form needs a resend action');
