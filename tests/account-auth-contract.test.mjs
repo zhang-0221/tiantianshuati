@@ -29,6 +29,13 @@ assert.match(html, /\.auth-card\{[^}]*background:rgba\(255,255,255,\.10\)/s, 'th
 assert.match(html, /\.auth-gate::after\{[^}]*bottom:0[^}]*height:28%/s, 'the lower source-image copy must be covered without whitening the centered glass panel');
 assert.doesNotMatch(html, /YOUR LEARNING SPACE/, 'the login surface should not introduce English copy over the Chinese experience');
 assert.match(html, /id="registerForm"/, 'registration must be available without leaving the gate');
+assert.match(html, /id="verificationForm"/, 'registration needs an email-code form');
+assert.match(html, /id="verificationEmail"/, 'the verification form must identify the target email');
+assert.match(html, /id="verificationCode"/, 'the verification form needs a six-digit input');
+assert.match(html, /autocomplete="one-time-code"/, 'the verification input should support OTP autofill');
+assert.match(html, /function submitEmailVerification\(/, 'the browser must submit an email OTP');
+assert.match(html, /auth\.verifyOtp\(\{ email, token, type: 'email' \}\)/, 'the OTP must be verified by Supabase');
+assert.match(html, /function resendPendingVerification\(/, 'the verification form needs a resend action');
 assert.match(html, /id="resetForm"/, 'password reset must be available without leaving the gate');
 assert.match(html, /id="completeResetForm"/, 'a recovery redirect must lead to a form that can set a new password');
 assert.match(html, /id="recoveryPassword"/, 'the completed recovery flow needs a new-password field');
