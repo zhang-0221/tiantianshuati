@@ -212,3 +212,17 @@ git add api/auth/password-reset.mjs api/auth/resend-verification.mjs docs/ACCOUN
 git commit -m "chore: remove email auth dependencies"
 ```
 
+### Task 5: Preserve access for previously unverified accounts
+
+**Files:**
+- Modify: `api/auth/login.mjs`
+- Modify: `tests/auth-api-contract.test.mjs`
+
+- [ ] **Step 1: Write a failing legacy-login contract**
+
+Require the login route to select `id, email`, call `service.auth.admin.updateUserById(profile.data.id, { email_confirm: true })` only after Supabase reports an unconfirmed-email error, and retry password login.
+
+- [ ] **Step 2: Verify RED, implement, and verify GREEN**
+
+Run `node --test tests/auth-api-contract.test.mjs` before the route change and confirm the missing legacy handling fails. Add the minimum confirmation-and-retry branch, then run `npm test` and require all tests to pass.
+

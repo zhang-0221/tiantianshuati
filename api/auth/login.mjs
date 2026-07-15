@@ -26,19 +26,24 @@ export default async function handler(req) {
     const service = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
-    const profile = await service.from('profiles').select('email').eq('username', username).maybeSingle();
+    const profile = await service.from('profiles').select('id, email').eq('username', username).maybeSingle();
     if (profile.error) return json({ ok: false, code: 'AUTH_UNAVAILABLE' }, 503, cors(req, env.ALLOWED_ORIGIN));
     if (!profile.data?.email) return json({ ok: false, code: 'INVALID_CREDENTIALS' }, 401, cors(req, env.ALLOWED_ORIGIN));
 
     const anonymous = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
-    const signedIn = await anonymous.auth.signInWithPassword({ email: profile.data.email, password });
+    let signedIn = await anonymous.auth.signInWithPassword({ email: profile.data.email, password });
     if (signedIn.error || !signedIn.data.session) {
       if (isEmailUnverifiedError(signedIn.error)) {
-        return json({ ok: false, code: 'EMAIL_UNVERIFIED' }, 403, cors(req, env.ALLOWED_ORIGIN));
+        const confirmed = await service.auth.admin.updateUserById(profile.data.id, { email_confirm: true });
+        if (!confirmed.error) {
+          signedIn = await anonymous.auth.signInWithPassword({ email: profile.data.email, password });
+        }
       }
-      return json({ ok: false, code: 'INVALID_CREDENTIALS' }, 401, cors(req, env.ALLOWED_ORIGIN));
+      if (signedIn.error || !signedIn.data.session) {
+        return json({ ok: false, code: 'INVALID_CREDENTIALS' }, 401, cors(req, env.ALLOWED_ORIGIN));
+      }
     }
     const { access_token, refresh_token, expires_in, token_type } = signedIn.data.session;
     return json({ ok: true, session: { access_token, refresh_token, expires_in, token_type } }, 200, cors(req, env.ALLOWED_ORIGIN));

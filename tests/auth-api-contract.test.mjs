@@ -24,7 +24,11 @@ for (const route of ['register', 'login']) {
   assert.doesNotMatch(source, /console\.log\([^)]*password/i);
 }
 
-assert.match(read('api/auth/login.mjs'), /signInWithPassword/);
+const login = read('api/auth/login.mjs');
+assert.match(login, /signInWithPassword/);
+assert.match(login, /select\('id, email'\)/, 'legacy account lookup must include the auth user id');
+assert.match(login, /service\.auth\.admin\.updateUserById\(/, 'a correct legacy password must unlock an unconfirmed account');
+assert.match(login, /email_confirm:\s*true/, 'legacy confirmation must not require a new email');
 
 const register = read('api/auth/register.mjs');
 assert.match(register, /internalEmailForUsername\(username\)/);
