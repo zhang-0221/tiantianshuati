@@ -26,6 +26,10 @@ export function normalizeUsername(value) {
   return USERNAME_PATTERN.test(username) ? username : null;
 }
 
+export function internalEmailForUsername(username) {
+  return `${username}@users.tiantianshuati.invalid`;
+}
+
 export function cors(req, allowedOrigin = process.env.ALLOWED_ORIGIN) {
   const origin = req.headers.get('origin');
   const allowed = new Set([allowedOrigin].filter(Boolean));
