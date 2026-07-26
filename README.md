@@ -1,43 +1,62 @@
 # 喜刷刷
 
-一个 HTML 文件全搞定的 AI 刷题工具。
+一款把资料导入、AI 出题、刷题复习和错题回顾放在一起的学习工具。现在以 **本地优先** 为主：不登录也能完整使用，学习资料与进度默认保存在当前设备。
 
-上传复习资料，DeepSeek 自动生成单选、多选、简答、论述题，一题一页机考模式，答完秒判对错。右侧内置 AI 学习助手，不懂随时问。
+> 适合把课件、笔记或文档快速转成自己的练习题库，并在电脑和手机上持续复习。
 
-## 功能
+## 下载与安装
 
-- 上传 .txt / .md / .docx 或粘贴资料
-- AI 自动生成四种题型（单选、多选、简答、论述）
-- 一题一页机考模式，顶部进度条追踪
-- 单选点选即判，多选题确认，简答/论述自评
-- 内置 AI 学习助手侧边栏，随时提问
-- 所有试卷自动保存到浏览器本地题库
-- 单文件 HTML，双击即用，无需安装
+请从 [Releases](https://github.com/zhang-0221/tiantianshuati/releases) 下载对应安装包：
 
-## 使用
+| 平台 | 安装包 | 说明 |
+| --- | --- | --- |
+| Windows 64 位 | `喜刷刷_0.1.0_x64-setup.exe` | 双击安装即可使用。首次打开若出现 SmartScreen 提示，可选择“仍要运行”。 |
+| Android ARM64 | `tiantianshuati_0.1.0_arm64.apk` | 下载后允许“安装未知来源应用”，再打开 APK 安装。适用于近年的大多数安卓手机。 |
 
-1. 双击打开 `喜刷刷.html`
-2. 点击左下角「API Key」设置你的 DeepSeek API Key（[免费申请](https://platform.deepseek.com/api_keys)）
-3. 上传或粘贴复习资料，点击「AI 生成试卷」
-4. 开始刷题
+## 能做什么
 
-## 依赖
+- 导入或粘贴学习资料，支持 `.txt`、`.md`、`.docx`、`.pdf` 等内容；
+- 通过 DeepSeek 生成练习题、背诵卡与知识导图；
+- 管理题库与试卷，按单选、多选、判断等题型刷题；
+- 自动记录正确、错误与学习进度，方便回顾薄弱知识点；
+- 提供背诵宝地、情景单词、思维导图等学习视图；
+- 内置简洁的 AI 学习助手，可作为日常问答助手使用；
+- 一键导出并恢复完整学习备份，换设备时更安心。
 
-- [DeepSeek API](https://platform.deepseek.com/) — AI 出题和对话
-- [mammoth.js](https://github.com/mwilliamson/mammoth.js) — .docx 文件解析
-- 无需 Node.js、Python 或任何后端
+## 数据与隐私
 
-## 无需 API 版本
+喜刷刷默认不要求账号登录，也不会把你的题库自动上传到服务器：
 
-如果不想申请 API Key，可以使用 `backup/机考复习工具-本地版.html`，纯本地正则解析出题，功能简化但完全离线可用。
+- 资料、题库、答题记录和学习进度保存在本机；
+- 需要换电脑或手机时，请先在设置中导出完整备份，再在新设备恢复；
+- DeepSeek API Key 只保存在当前设备，**不会**包含在备份中；
+- 旧的云端账号相关代码暂时保留，但当前版本不启用，后续如需跨设备云同步再单独开启。
 
-## 注意
+## 使用建议
 
-- API Key 仅保存在你自己的浏览器中，不会上传
-- DeepSeek API 按量计费，生成一次试卷约消耗几千 tokens
+1. 打开“导入”页面，上传一份资料或直接粘贴文本。
+2. 在设置中填写自己的 DeepSeek API Key（如需 AI 出题或问答）。
+3. 生成题目后，到“我的题库”选择试卷开始刷题。
+4. 定期在设置中导出完整备份，保存到自己信任的位置。
 
-## 账号与云同步（可选）
+## 本地开发
 
-账号功能使用“用户名 + 密码”登录，将题库、答题记录、背诵进度与学习设置按账号同步到云端；首次登录会让用户选择如何迁移本机数据。完整的 Supabase、Vercel 和 GitHub Pages 配置见 [docs/ACCOUNT_SETUP.md](docs/ACCOUNT_SETUP.md)。
+项目本体是原生 HTML/CSS/JavaScript，桌面与 Android 版本由 Tauri 封装。
 
-DeepSeek API Key 不会与账号同步，始终只保存在当前浏览器。
+```bash
+npm install
+npm test
+npm run desktop:prepare
+npm run desktop:build
+npm run mobile:build
+```
+
+常用要求：
+
+- Windows 桌面打包需要 Rust 与 Visual Studio C++ Build Tools；
+- Android 打包需要 Android SDK、NDK、JDK 17 和 Rust Android target；
+- `npm run mobile:build` 会生成并签名 ARM64 APK。
+
+## 项目状态
+
+当前版本以稳定、轻量、离线可用为优先。欢迎通过 [Issues](https://github.com/zhang-0221/tiantianshuati/issues) 反馈问题或提出改进建议。
