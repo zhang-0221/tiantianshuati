@@ -5,6 +5,10 @@ description = "喜刷刷桌面版"
 authors = ["Yon"]
 edition = "2021"
 
+[lib]
+name = "tiantianshuati_desktop"
+crate-type = ["cdylib", "rlib"]
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 

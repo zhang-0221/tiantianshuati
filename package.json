@@ -3,8 +3,10 @@
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.mjs",
+    "tauri": "tauri",
     "desktop:prepare": "node scripts/build-desktop-assets.mjs",
-    "desktop:build": "npm run desktop:prepare && tauri build --config src-tauri/tauri.conf.json"
+    "desktop:build": "npm run desktop:prepare && tauri build --config src-tauri/tauri.conf.json",
+    "mobile:build": "node scripts/build-android.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.0",
