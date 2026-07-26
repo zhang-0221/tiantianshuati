@@ -6,3 +6,6 @@ Thumbs.db
 
 .vercel
 .worktrees/
+node_modules/
+dist-desktop/
+src-tauri/target/

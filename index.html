@@ -22,7 +22,6 @@
 })();
 </script>
 <script src="./auth-config.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.0" integrity="sha384-/E7xfJz9bbCsrwJAbrt9CO5JB1REPVQjuSrQT4Cpz2BQBocDVsGLB2/VMAEzYaf+" crossorigin="anonymous"></script>
 <style>
 :root {
   --bg: #f5f5f7;
@@ -1021,7 +1020,10 @@ textarea:focus{border-color:#8db4ff;box-shadow:0 0 0 4px rgba(37,99,235,.09);}
           <button class="btn btn-s btn-xs" onclick="exportLibrary()" title="导出题库到文件，可跨设备导入">📤 导出</button>
           <button class="btn btn-s btn-xs" onclick="document.getElementById('importFileInput').click()" title="从导出的文件恢复题库">📥 导入</button>
           <input type="file" id="importFileInput" accept=".json" style="display:none" onchange="importLibrary(this)">
-          <button class="btn btn-s btn-xs" onclick="showSyncModal()" title="生成同步码，手机输入即可同步">☁️ 同步</button>
+          <button class="btn btn-s btn-xs" onclick="exportFullBackup()" title="备份题库、进度、背诵记录、单词和设置">💾 完整备份</button>
+          <button class="btn btn-s btn-xs" onclick="document.getElementById('fullBackupFileInput').click()" title="恢复完整本地备份">📥 恢复备份</button>
+          <input type="file" id="fullBackupFileInput" accept=".json" style="display:none" onchange="importFullBackup(this)">
+          <button class="btn btn-s btn-xs" id="legacySyncBtn" onclick="showSyncModal()" title="生成同步码，手机输入即可同步" hidden>☁️ 同步</button>
           <button class="btn btn-s btn-xs" id="mergeBtn" onclick="toggleMergeMode()" style="margin-left:auto;" title="勾选多份试卷合并为一份">📦 合并</button>
         </div>
         <div class="merge-toolbar" id="mergeToolbar">
@@ -1283,6 +1285,7 @@ const CLOUD_RETRY_LIMIT = 3;
 const CLOUD_RETRY_BASE_DELAY = 1200;
 const AUTH_CONFIG = window.TTSK_AUTH_CONFIG || null;
 const AUTH_GATE_ENABLED = Boolean(AUTH_CONFIG?.enableGate === true);
+const LOCAL_ONLY_MODE = AUTH_CONFIG?.localOnly === true;
 const MAMMOTH_CDNS = [
   'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js',
   'https://unpkg.com/mammoth@1.8.0/mammoth.browser.min.js',
@@ -1598,6 +1601,11 @@ async function signOutAccount() {
 }
 
 function initializeAuth() {
+  if (LOCAL_ONLY_MODE) {
+    setAuthGateActive(false);
+    renderAccountMenu(null);
+    return;
+  }
   const client = getAuthClient();
   if (!client) {
     setAuthGateActive(AUTH_GATE_ENABLED);
@@ -1619,7 +1627,28 @@ function initializeAuth() {
   restoreSession();
 }
 
-initializeAuth();
+function startAuthRuntime() {
+  if (LOCAL_ONLY_MODE) {
+    initializeAuth();
+    return;
+  }
+  if (window.supabase?.createClient) {
+    initializeAuth();
+    return;
+  }
+  const script = document.createElement('script');
+  script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.0';
+  script.integrity = 'sha384-/E7xfJz9bbCsrwJAbrt9CO5JB1REPVQjuSrQT4Cpz2BQBocDVsGLB2/VMAEzYaf+';
+  script.crossOrigin = 'anonymous';
+  script.onload = initializeAuth;
+  script.onerror = () => {
+    setAuthGateActive(AUTH_GATE_ENABLED);
+    if (AUTH_GATE_ENABLED) setAuthStatus('账号服务暂不可用，请稍后再试。');
+  };
+  document.head.appendChild(script);
+}
+
+startAuthRuntime();
 
 function getGenerationFeedback(state, message, retryHandler) {
   const safeMessage = String(message).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
@@ -1985,6 +2014,47 @@ function exportLibrary() {
   a.click();
   URL.revokeObjectURL(a.href);
   toast('已导出 ' + library.length + ' 份试卷', 'ok');
+}
+
+function exportFullBackup() {
+  const backup = {
+    format: 'tiantianshuati-local-backup',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    learning: buildLearningSnapshot()
+  };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  const now = new Date();
+  const ds = now.getFullYear() + '-' + (now.getMonth() + 1) + '-' + now.getDate();
+  a.href = URL.createObjectURL(blob);
+  a.download = '喜刷刷完整备份_' + ds + '.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('完整本地备份已导出', 'ok');
+}
+
+function importFullBackup(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function() {
+    try {
+      const backup = JSON.parse(reader.result);
+      if (backup?.format !== 'tiantianshuati-local-backup' || backup?.version !== 1 || !backup?.learning) {
+        toast('不是有效的喜刷刷完整备份文件', 'err');
+        return;
+      }
+      applyLearningSnapshot(backup.learning);
+      renderLib();
+      renderWorkspaceStats();
+      toast('完整本地备份已恢复', 'ok');
+    } catch {
+      toast('备份文件解析失败，请检查文件格式', 'err');
+    }
+  };
+  reader.readAsText(file);
+  input.value = '';
 }
 
 function importLibrary(input) {
@@ -4989,7 +5059,7 @@ function decideInitialMigration(action) {
 }
 
 function queueCloudSync(delay = CLOUD_SYNC_DELAY) {
-  if (!authenticatedUser?.id || !cloudSyncMigrationResolved || !getAuthClient()) return;
+  if (LOCAL_ONLY_MODE || !authenticatedUser?.id || !cloudSyncMigrationResolved || !getAuthClient()) return;
   cloudSyncQueued = true;
   clearTimeout(cloudSyncTimer);
   setSyncStatus(navigator.onLine ? '等待同步…' : '离线，等待同步');

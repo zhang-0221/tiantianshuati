@@ -6,7 +6,8 @@ const publicConfig = fs.readFileSync(new URL('../auth-config.js', import.meta.ur
 
 assert.match(html, /const LS_KEY = 'ttsk_ds_key'/);
 assert.match(html, /<script src="\.\/auth-config\.js"><\/script>/, 'the deployed static shell must load the public auth configuration before app code');
-assert.match(publicConfig, /enableGate:\s*true/, 'the production public configuration must enable the account gate');
+assert.match(publicConfig, /localOnly:\s*true/, 'the public release must preserve the account configuration while operating locally');
+assert.match(publicConfig, /enableGate:\s*false/, 'the public release must not expose the account gate');
 assert.match(publicConfig, /supabaseUrl:/, 'the public configuration must identify the Supabase project');
 assert.match(publicConfig, /supabaseAnonKey:/, 'the browser must receive only its publishable Supabase credential');
 assert.match(publicConfig, /apiBase:/, 'the browser must use the deployed auth API');
@@ -39,9 +40,9 @@ assert.match(html, /\.auth-gate\{[^}]*z-index:3000/s, 'the gate must visually si
 assert.doesNotMatch(html, /数据将按账号隔离保存/, 'the static shell must not promise isolation before session wiring exists');
 
 assert.match(html, /const LS_AUTH_SESSION = 'ttsk_auth_session'/, 'authenticated sessions need a dedicated local storage key');
-assert.match(html, /cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@2\.57\.0/, 'the browser client must pin the Supabase CDN version');
-assert.match(html, /integrity="sha384-\/E7xfJz9bbCsrwJAbrt9CO5JB1REPVQjuSrQT4Cpz2BQBocDVsGLB2\/VMAEzYaf\+"/, 'the pinned Supabase SDK must have the reviewed SHA-384 integrity hash');
-assert.match(html, /crossorigin="anonymous"/, 'the SDK integrity check must use anonymous cross-origin mode');
+assert.match(html, /script\.src = 'https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@2\.57\.0'/, 'the future account runtime must pin the Supabase CDN version');
+assert.match(html, /script\.integrity = 'sha384-\/E7xfJz9bbCsrwJAbrt9CO5JB1REPVQjuSrQT4Cpz2BQBocDVsGLB2\/VMAEzYaf\+'/ , 'the deferred SDK must retain the reviewed SHA-384 integrity hash');
+assert.match(html, /script\.crossOrigin = 'anonymous'/, 'the deferred SDK integrity check must use anonymous cross-origin mode');
 for (const fn of ['submitRegistration', 'submitLogin', 'restoreSession', 'signOutAccount', 'apiFetch']) {
   assert.match(html, new RegExp(`(?:async )?function ${fn}\\(`), `missing browser auth function: ${fn}`);
 }
