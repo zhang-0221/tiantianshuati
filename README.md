@@ -10,7 +10,7 @@
 
 | 平台 | 安装包 | 说明 |
 | --- | --- | --- |
-| Windows 64 位 | `喜刷刷_0.1.0_x64-setup.exe` | 双击安装即可使用。首次打开若出现 SmartScreen 提示，可选择“仍要运行”。 |
+| Windows 64 位 | `xishuashua_0.1.0_x64-setup.exe` | 双击安装即可使用。首次打开若出现 SmartScreen 提示，可选择“仍要运行”。 |
 | Android ARM64 | `tiantianshuati_0.1.0_arm64.apk` | 下载后允许“安装未知来源应用”，再打开 APK 安装。适用于近年的大多数安卓手机。 |
 
 ## 能做什么
