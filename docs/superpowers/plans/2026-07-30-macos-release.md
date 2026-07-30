@@ -180,9 +180,10 @@ jobs:
           merge-multiple: true
       - env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
-          gh release view "$RELEASE_TAG" || gh release create "$RELEASE_TAG" --title "喜刷刷 $RELEASE_TAG" --notes "macOS 安装包由 GitHub Actions 构建，未进行 Apple 签名或公证。"
-          gh release upload "$RELEASE_TAG" release-assets/*.dmg --clobber
+          gh release view "$RELEASE_TAG" --repo "$GH_REPO" || gh release create "$RELEASE_TAG" --repo "$GH_REPO" --title "喜刷刷 $RELEASE_TAG" --notes "macOS 安装包由 GitHub Actions 构建，未进行 Apple 签名或公证。"
+          gh release upload "$RELEASE_TAG" release-assets/*.dmg --clobber --repo "$GH_REPO"
 ```
 
 - [ ] **Step 4: Run the workflow contract test**

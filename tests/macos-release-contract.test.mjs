@@ -19,5 +19,7 @@ assert.match(workflow, /aarch64-apple-darwin/, 'the Apple Silicon target is requ
 assert.match(workflow, /tauri\.macos\.conf\.json/, 'the workflow must use the isolated DMG configuration');
 assert.match(workflow, /gh release upload/, 'the workflow must attach the DMGs to a GitHub Release');
 assert.match(workflow, /--clobber/, 'a rerun must replace an older same-name DMG');
+assert.match(workflow, /GH_REPO:\s*\$\{\{ github\.repository \}\}/, 'the publish job must provide GitHub CLI with an explicit repository');
+assert.match(workflow, /--repo "\$GH_REPO"/, 'release commands must not depend on a checked-out git repository');
 
 console.log('macOS release contract passed');
