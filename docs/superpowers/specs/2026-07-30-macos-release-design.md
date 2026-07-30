@@ -22,7 +22,7 @@
 
 ## Architecture
 
-新增一份 macOS 专用 Tauri 覆盖配置，将现有仅面向 Windows 的 `nsis` 打包目标切换为 `dmg`。GitHub Actions 以两个独立的 macOS runner job 构建 Intel 和 Apple Silicon 版本：每个 job 安装 Node、Rust target 与 Tauri CLI，运行现有的 `npm.cmd test` 等价命令以及桌面资源准备步骤，再生成 `.dmg`。
+新增一份 macOS 专用 Tauri 覆盖配置，将现有仅面向 Windows 的 `nsis` 打包目标切换为 `dmg`。GitHub Actions 以两个独立的 Apple Silicon macOS runner job 构建 Intel 和 Apple Silicon 版本：一个 job 使用 Rust 的 `x86_64-apple-darwin` target 交叉构建 Intel 包，另一个使用 `aarch64-apple-darwin` target 原生构建。两个 job 均安装 Node、Rust target 与 Tauri CLI，运行现有测试和桌面资源准备步骤，再生成 `.dmg`。
 
 工作流使用 GitHub 提供的 `GITHUB_TOKEN` 和 `contents: write` 权限创建或查找指定标签的 Release。构建完成后将产物重命名为稳定的英文文件名并上传；重复运行时以覆盖方式更新同名附件，避免残留旧包。
 

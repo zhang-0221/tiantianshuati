@@ -4,7 +4,7 @@
 
 **Goal:** Build Intel and Apple Silicon macOS DMGs in GitHub Actions and upload them to a GitHub Release without changing the web, Windows, or Android distribution paths.
 
-**Architecture:** A Tauri macOS override config changes only the bundle target and icon for a DMG build. A GitHub Actions matrix runs the native Intel and Apple Silicon builds independently, uploads each DMG as an intermediate artifact, then a publish job creates or finds the requested release and replaces the two stable asset names.
+**Architecture:** A Tauri macOS override config changes only the bundle target and icon for a DMG build. A GitHub Actions matrix runs two independent Apple Silicon macOS jobs: one cross-builds the Intel target and one builds the Apple Silicon target. Each uploads a DMG as an intermediate artifact, then a publish job creates or finds the requested release and replaces the two stable asset names.
 
 **Tech Stack:** Tauri 2, Rust, Node.js/npm, GitHub Actions, GitHub CLI available on hosted runners.
 
@@ -93,8 +93,9 @@ Append to `tests/macos-release-contract.test.mjs`:
 const workflow = fs.readFileSync(new URL('../.github/workflows/macos-release.yml', import.meta.url), 'utf8');
 assert.match(workflow, /workflow_dispatch:/, 'maintainers must be able to publish macOS assets manually');
 assert.match(workflow, /release_tag:/, 'manual releases need an explicit tag input');
-assert.match(workflow, /macos-13/, 'the workflow must include an Intel macOS runner');
-assert.match(workflow, /macos-14/, 'the workflow must include an Apple Silicon macOS runner');
+assert.match(workflow, /- runner: macos-14\s+target: x86_64-apple-darwin/s, 'the available Apple Silicon runner must cross-build the Intel target');
+assert.match(workflow, /- runner: macos-14\s+target: aarch64-apple-darwin/s, 'the workflow must build the native Apple Silicon target');
+assert.doesNotMatch(workflow, /macos-13/, 'the workflow must not wait for the unavailable Intel runner');
 assert.match(workflow, /x86_64-apple-darwin/, 'the Intel target is required');
 assert.match(workflow, /aarch64-apple-darwin/, 'the Apple Silicon target is required');
 assert.match(workflow, /tauri\.macos\.conf\.json/, 'the workflow must use the isolated DMG configuration');
@@ -139,7 +140,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - runner: macos-13
+          - runner: macos-14
             target: x86_64-apple-darwin
             asset_suffix: x64
           - runner: macos-14
