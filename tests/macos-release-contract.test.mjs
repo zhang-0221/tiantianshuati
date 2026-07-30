@@ -8,4 +8,15 @@ const config = fs.readFileSync(macConfig, 'utf8');
 assert.match(config, /"targets"\s*:\s*\[\s*"dmg"\s*\]/s, 'macOS must bundle a DMG');
 assert.match(config, /"icons\/icon\.icns"/, 'macOS must use the ICNS application icon');
 
+const workflow = fs.readFileSync(new URL('../.github/workflows/macos-release.yml', import.meta.url), 'utf8');
+assert.match(workflow, /workflow_dispatch:/, 'maintainers must be able to publish macOS assets manually');
+assert.match(workflow, /release_tag:/, 'manual releases need an explicit tag input');
+assert.match(workflow, /macos-13/, 'the workflow must include an Intel macOS runner');
+assert.match(workflow, /macos-14/, 'the workflow must include an Apple Silicon macOS runner');
+assert.match(workflow, /x86_64-apple-darwin/, 'the Intel target is required');
+assert.match(workflow, /aarch64-apple-darwin/, 'the Apple Silicon target is required');
+assert.match(workflow, /tauri\.macos\.conf\.json/, 'the workflow must use the isolated DMG configuration');
+assert.match(workflow, /gh release upload/, 'the workflow must attach the DMGs to a GitHub Release');
+assert.match(workflow, /--clobber/, 'a rerun must replace an older same-name DMG');
+
 console.log('macOS release contract passed');

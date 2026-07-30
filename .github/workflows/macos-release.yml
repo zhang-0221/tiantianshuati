@@ -1,0 +1,71 @@
+name: Build macOS release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing or new GitHub Release tag, for example v0.1.0
+        required: true
+        type: string
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+env:
+  RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
+
+jobs:
+  build:
+    name: macOS (${{ matrix.asset_suffix }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-13
+            target: x86_64-apple-darwin
+            asset_suffix: x64
+          - runner: macos-14
+            target: aarch64-apple-darwin
+            asset_suffix: aarch64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run desktop:prepare
+      - run: npx tauri build --config src-tauri/tauri.macos.conf.json --target ${{ matrix.target }}
+      - name: Normalize DMG file name
+        run: |
+          mkdir -p release-assets
+          VERSION=$(node -p "JSON.parse(require('fs').readFileSync('src-tauri/tauri.conf.json', 'utf8')).version")
+          cp src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg release-assets/xishuashua_${VERSION}_${{ matrix.asset_suffix }}.dmg
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{ matrix.asset_suffix }}
+          path: release-assets/*.dmg
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+      - name: Upload macOS installers to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$RELEASE_TAG" || gh release create "$RELEASE_TAG" --title "喜刷刷 $RELEASE_TAG" --notes "macOS 安装包由 GitHub Actions 构建，未进行 Apple 签名或公证。"
+          gh release upload "$RELEASE_TAG" release-assets/*.dmg --clobber
