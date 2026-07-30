@@ -27,5 +27,7 @@ assert.ok(fs.existsSync(new URL('../src-tauri/src/main.rs', import.meta.url)), '
 assert.ok(fs.existsSync(new URL('../src-tauri/icons/icon.ico', import.meta.url)), 'Windows packaging requires an application icon');
 assert.match(fs.readFileSync(new URL('../src-tauri/tauri.conf.json', import.meta.url), 'utf8'), /"icon":\s*\[\s*"icons\/icon\.ico"\s*\]/s, 'the Tauri bundle must explicitly use the Windows icon');
 assert.match(fs.readFileSync(new URL('../src-tauri/tauri.conf.json', import.meta.url), 'utf8'), /"targets":\s*\[\s*"nsis"\s*\]/s, 'the Windows build must use the Unicode-capable NSIS installer');
+assert.ok(fs.existsSync(new URL('../src-tauri/tauri.macos.conf.json', import.meta.url)), 'macOS packaging needs an isolated override config');
+assert.match(fs.readFileSync(new URL('../src-tauri/tauri.macos.conf.json', import.meta.url), 'utf8'), /"targets":\s*\[\s*"dmg"\s*\]/s, 'the macOS override must not alter the Windows NSIS target');
 
 console.log('local-only mode contract passed');
