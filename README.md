@@ -12,6 +12,8 @@
 | --- | --- | --- |
 | Windows 64 位 | `xishuashua_0.1.0_x64-setup.exe` | 双击安装即可使用。首次打开若出现 SmartScreen 提示，可选择“仍要运行”。 |
 | Android ARM64 | `tiantianshuati_0.1.0_arm64.apk` | 下载后允许“安装未知来源应用”，再打开 APK 安装。适用于近年的大多数安卓手机。 |
+| macOS Intel | `xishuashua_0.1.0_x64.dmg` | 适用于 Intel 芯片 Mac；首次打开可能需要在“隐私与安全性”中允许。 |
+| macOS Apple Silicon | `xishuashua_0.1.0_aarch64.dmg` | 适用于 M 系列芯片 Mac；首次打开可能需要在“隐私与安全性”中允许。 |
 
 ## 能做什么
 
