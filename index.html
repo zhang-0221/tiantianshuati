@@ -968,20 +968,20 @@ textarea:focus{border-color:#8db4ff;box-shadow:0 0 0 4px rgba(37,99,235,.09);}
         <textarea id="materialInput" placeholder="粘贴复习资料……&#10;换行分隔不同知识点效果更好"></textarea>
         <div class="generation-controls" style="display:flex;align-items:center;gap:12px;margin-top:10px;flex-wrap:wrap;">
           <label class="toggle-wrap" style="font-size:13px;color:var(--text);gap:8px;">
-            <input type="checkbox" id="bigQuestionsToggle" checked style="width:16px;height:16px;accent-color:var(--accent);"> 生成大题（简答+论述 → 背诵宝地）
+            <input type="checkbox" id="bigQuestionsToggle" checked style="width:16px;height:16px;accent-color:var(--accent);"> 资料出题时生成大题（简答+论述）
           </label>
           <label class="toggle-wrap" style="font-size:13px;color:var(--text);gap:8px;">
             <input type="checkbox" id="outlineToggle" style="width:16px;height:16px;accent-color:var(--accent);"> 同时生成知识大纲（思维导图）
           </label>
-          <button class="btn btn-p" id="genBtn" onclick="generateExam()">AI 生成试卷</button>
+          <button class="btn btn-p" id="genBtn" onclick="generateExam()">AI 识别并导入</button>
         </div>
         <div id="genStatus"></div>
       </div>
       <aside class="dashboard-rail">
         <section class="rail-card">
           <h3><i>✦</i> AI 学习建议</h3>
-          <p>资料按章节分段、重点清晰时，生成的题目和知识大纲会更准确。</p>
-          <small>建议先从一章或一个主题开始</small>
+          <p>上传试题会保留原题和答案；上传学习资料则自动生成练习题。</p>
+          <small>AI 自动识别内容，无需套用固定模板</small>
         </section>
         <section class="rail-card rail-goals">
           <h3>本次学习</h3>
@@ -1272,6 +1272,7 @@ textarea:focus{border-color:#8db4ff;box-shadow:0 0 0 4px rgba(37,99,235,.09);}
 <!-- Chat overlay for mobile -->
 <div class="chat-overlay" id="chatOverlay" onclick="toggleChat()"></div>
 
+<script src="question-import.js"></script>
 <script>
 // ==================== STATE ====================
 const LS_KEY = 'ttsk_ds_key', LS_LIB = 'ttsk_library', LS_PROGRESS = 'ttsk_progress';
@@ -1302,6 +1303,7 @@ const PDFJS_WORKER_CDNS = [
 let apiKey = localStorage.getItem(LS_KEY) || '';
 let library = [];
 let activeExam = null;
+let questionImportSession = null;
 let filteredQuestions = [];
 let currentIndex = 0;
 let autoAdvance = true;
@@ -2505,6 +2507,29 @@ async function processFiles(files) {
 
 let mammothLoaded = false, mammothLoading = false;
 let pdfjsLoaded = false, pdfjsLoading = false;
+async function readDocxText(arrayBuffer) {
+  // extractRawText drops Word's soft line breaks. HTML conversion preserves
+  // those breaks, list numbering and table cells before we turn it into text.
+  const result = await mammoth.convertToHtml({ arrayBuffer });
+  const parsed = new DOMParser().parseFromString(result.value, 'text/html');
+  function read(node) {
+    if (node.nodeType === 3) return node.textContent;
+    if (node.nodeType !== 1) return '';
+    const tag = node.tagName;
+    if (tag === 'BR') return '\n';
+    if (['SCRIPT', 'STYLE'].includes(tag)) return '';
+    if (tag === 'OL' || tag === 'UL') {
+      const start = Number(node.getAttribute('start')) || 1;
+      return Array.from(node.children).map((child, i) => (tag === 'OL' ? (start + i) + '. ' : '• ') + read(child).trim() + '\n\n').join('');
+    }
+    const text = Array.from(node.childNodes).map(read).join('');
+    if (tag === 'TD' || tag === 'TH') return text.trim() + '\t';
+    if (/^(P|H[1-6]|DIV|LI|TR|BLOCKQUOTE)$/.test(tag)) return text + '\n\n';
+    return text;
+  }
+  return read(parsed.body).replace(/\t\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+
 async function processFileGetText(file) {
   const ext = file.name.split('.').pop().toLowerCase();
   if (ext === 'txt' || ext === 'md' || ext === 'csv') {
@@ -2527,8 +2552,7 @@ async function processFileGetText(file) {
     }
     try {
       const buf = await file.arrayBuffer();
-      const result = await mammoth.extractRawText({ arrayBuffer: buf });
-      return result.value.trim();
+      return await readDocxText(buf);
     } catch (err) { toast('DOCX 解析失败：' + err.message, 'err'); return ''; }
   }
   if (ext === 'pdf') {
@@ -2559,11 +2583,16 @@ async function processFileGetText(file) {
 function loadScript(url) { return new Promise((resolve, reject) => { const s = document.createElement('script'); s.src = url; s.onload = resolve; s.onerror = reject; document.head.appendChild(s); }); }
 
 // ==================== API ====================
-function fetchTimeout(url, opts, ms) {
-  return Promise.race([fetch(url, opts), new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), ms))]);
+async function fetchTimeout(url, opts, ms) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try { return await fetch(url, { ...opts, signal: controller.signal }); }
+  catch (error) { if (controller.signal.aborted) throw new Error('TIMEOUT'); throw error; }
+  finally { clearTimeout(timer); }
 }
 
 async function generateExam() {
+  if (document.getElementById('genBtn').disabled) return;
   const material = document.getElementById('materialInput').value.trim();
   if (!material) { toast('请先上传文件或粘贴资料', 'err'); return; }
   if (material.length < 30) { toast('资料太短（至少30字）', 'err'); return; }
@@ -2574,15 +2603,19 @@ async function generateExam() {
   const includeOutline = document.getElementById('outlineToggle').checked;
   const includeBigQuestions = document.getElementById('bigQuestionsToggle').checked;
   const genOptions = { includeOutline, includeBigQuestions };
-  btn.disabled = true; btn.textContent = 'AI 生成中……';
+  const sessionGeneration = authSessionGeneration;
+  btn.disabled = true; btn.textContent = 'AI 处理中……';
   setGenerationFeedback(status, 'loading', '连接 DeepSeek……');
 
   try {
-    let allQuestions = [];
+    if (!questionImportSession || questionImportSession.material !== material) questionImportSession = QuestionImport.createSession(material);
+    const progress = message => setGenerationFeedback(status, 'loading', message);
+    const imported = await QuestionImport.extract(questionImportSession, requestAIJSON, progress);
+    let allQuestions = imported.questions;
     let outline = null;
 
-    // For materials > 8000 chars, split into chunks and process in batches
-    if (material.length > 8000) {
+    // Existing exam questions never pass through the question-generation prompt.
+    if (imported.kind === 'material' && material.length > 8000) {
       const chunks = splitIntoChunks(material, 5000);
       setGenerationFeedback(status, 'loading', '资料较长，分 ' + chunks.length + ' 段处理（共约' + material.length + '字）……');
 
@@ -2591,20 +2624,27 @@ async function generateExam() {
         const result = await callAI(chunks[ci], '请根据以下学习资料生成考试题目，尽量覆盖本段所有知识点：\n\n' + chunks[ci], { includeOutline: false, includeBigQuestions: genOptions.includeBigQuestions });
         allQuestions = allQuestions.concat(result.questions);
       }
-    } else {
+    } else if (imported.kind === 'material') {
       // Single call for smaller materials
       setGenerationFeedback(status, 'loading', 'AI 正在分析资料并生成题目' + (includeOutline ? '和知识大纲' : '') + '……');
-      const result = await callAI(material, '请根据以下学习资料生成考试题目，覆盖资料中所有知识点：\n\n' + material, genOptions);
+      const result = await callAI(material, '请根据以下学习资料生成考试题目，覆盖资料中所有知识点：\n\n' + material, { ...genOptions, includeOutline: false });
       allQuestions = result.questions;
       outline = result.outline || null;
     }
 
     if (allQuestions.length === 0) throw new Error('未生成有效题目');
     if (includeOutline) {
+      setGenerationFeedback(status, 'loading', '题目已处理，AI 正在单独整理知识大纲……');
+      const result = await requestAIJSON(SYS_PROMPT_OUTLINE + MINDMAP_QUALITY_PROMPT + '\n本次只整理知识大纲。questions必须为空数组，不生成任何题目，也不改写原题。', material);
+      outline = result.outline;
       if (!outline || !outline.length) throw new Error('知识大纲生成失败，请重新生成');
+      enrichOutline(outline);
+      autoLinkQuestions(allQuestions, outline);
       const outlineCheck = validateGeneratedOutline(outline, material);
       if (!outlineCheck.ok) throw new Error(outlineCheck.message);
     }
+
+    if (authSessionGeneration !== sessionGeneration) throw new Error('账号已切换，请在当前账号下重新导入');
 
     // Re-index questions
     const questions = allQuestions.map((q, i) => ({
@@ -2612,6 +2652,7 @@ async function generateExam() {
       correctIndex: q.correctIndex, correctIndexes: q.correctIndexes || [],
       referenceAnswer: q.referenceAnswer || '', explanation: q.explanation || '',
       outlineNodeId: q.outlineNodeId || '',
+      ...(q.sourceId ? { sourceId: q.sourceId, sourceLabel: q.sourceLabel, answerEvidence: q.answerEvidence, answerStatus: q.answerStatus } : {}),
     }));
 
     const now = new Date();
@@ -2621,17 +2662,26 @@ async function generateExam() {
     saveExam(name);
     switchTab('library');
     showExamDetail(activeExam.id);
-    setGenerationFeedback(status, 'success', '已生成 ' + questions.length + ' 题，并保存到我的题库');
-    toast('生成 ' + questions.length + ' 题', 'ok');
+    const action = imported.kind === 'questions' ? '导入' : '生成';
+    const typeNames = { single: '单选', multiple: '多选', tf: '判断', short: '简答', essay: '论述' };
+    const breakdown = Object.entries(typeNames).map(([type, label]) => {
+      const count = questions.filter(q => q.type === type).length;
+      return count ? label + ' ' + count + ' 题' : '';
+    }).filter(Boolean).join('、');
+    const missing = questions.filter(q => q.answerStatus === 'missing').length;
+    const message = '已' + action + ' ' + questions.length + ' 题（' + breakdown + '），并保存到我的题库' + (missing ? '。其中 ' + missing + ' 题原文缺少答案，已标记待补充' : '');
+    setGenerationFeedback(status, 'success', message);
+    toast(message, 'ok');
+    questionImportSession = null;
 
   } catch (err) {
     let msg = err.message;
     if (msg === 'TIMEOUT') msg = '请求超时。请检查：\n1. 网络能否访问 api.deepseek.com\n2. 是否需要开代理/VPN\n3. 资料是否过长';
     if (err.name === 'TypeError' && msg.includes('fetch')) msg = '网络连接失败。请检查网络或尝试开代理';
     setGenerationFeedback(status, 'error', msg, 'generateExam');
-    toast('生成失败', 'err');
+    toast('处理未完成，可重试继续', 'err');
   }
-  btn.disabled = false; btn.textContent = 'AI 生成试卷';
+  btn.disabled = false; btn.textContent = 'AI 识别并导入';
 }
 
 // Split text into chunks at paragraph boundaries, each ~targetSize chars
@@ -2651,7 +2701,46 @@ function splitIntoChunks(text, targetSize) {
   return chunks.length > 0 ? chunks : [text];
 }
 
-// Call DeepSeek API and parse questions (and optionally outline) from response
+// JSON mode plus explicit completion checks: a repaired partial response must
+// never be mistaken for a complete imported exam.
+async function requestAIContent(system, user, temperature) {
+  let resp;
+  try {
+    resp = await fetchTimeout('https://api.deepseek.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+      body: JSON.stringify({ model: 'deepseek-chat', messages: [{ role: 'system', content: system }, { role: 'user', content: user }], temperature, max_tokens: 8192, response_format: { type: 'json_object' } })
+    }, 120000);
+  } catch (error) {
+    error.code = error.message === 'TIMEOUT' ? 'AI_TIMEOUT' : 'AI_NETWORK_ERROR';
+    throw error;
+  }
+  if (!resp.ok) {
+    let em = ''; try { em = (await resp.json()).error?.message || ''; } catch {}
+    const messages = { 401: 'API Key 无效（401）', 402: '账户余额不足（402）', 429: '请求频繁（429），稍后重试' };
+    const error = new Error(messages[resp.status] || em || 'API 错误 (HTTP ' + resp.status + ')');
+    error.code = 'AI_HTTP_ERROR';
+    throw error;
+  }
+  const data = await resp.json();
+  const choice = data.choices?.[0];
+  if (choice?.finish_reason !== 'stop') {
+    const error = new Error(choice?.finish_reason === 'length' ? 'AI 返回被长度限制截断，正在等待较小批次重新提取' : 'AI 返回未正常完成，请重试');
+    error.code = 'AI_INCOMPLETE_RESPONSE';
+    throw error;
+  }
+  const content = choice.message?.content;
+  if (typeof content !== 'string' || !content.trim()) throw new Error('API 返回空内容');
+  return content.trim();
+}
+
+async function requestAIJSON(system, user) {
+  const content = await requestAIContent(system, user, 0.1);
+  try { return JSON.parse(content); }
+  catch { throw new Error('AI 返回的 JSON 不完整，请重试'); }
+}
+
+// Call DeepSeek API for newly generated questions only.
 async function callAI(materialChunk, userMsg, options) {
   const includeOutline = options && options.includeOutline;
   const includeBigQuestions = options ? options.includeBigQuestions !== false : true;
@@ -2664,26 +2753,8 @@ async function callAI(materialChunk, userMsg, options) {
   if (options && options.reciteOnly) {
     basePrompt += '\n\n## ⚠️ 本次限制：只生成背诵大题\n用户选择只生成背诵大题。本次只生成 short（简答题）和 essay（论述题）两种题型，严禁生成 single、multiple、tf。简答约60%、论述约40%。\n每道题的 referenceAnswer 必须完整、准确、结构清晰，可作为背诵范本。题目必须覆盖资料中的所有核心知识点。';
   }
-  const sysPrompt = basePrompt;
-  const resp = await fetchTimeout('https://api.deepseek.com/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
-    body: JSON.stringify({ model: 'deepseek-chat', messages: [{ role: 'system', content: sysPrompt }, { role: 'user', content: userMsg }], temperature: 0.7, max_tokens: 8192 })
-  }, 120000);
-
-  if (!resp.ok) {
-    let em = ''; try { em = (await resp.json()).error?.message || ''; } catch {}
-    if (resp.status === 401) throw new Error('API Key 无效（401）');
-    if (resp.status === 402) throw new Error('账户余额不足（402）');
-    if (resp.status === 429) throw new Error('请求频繁（429），稍后重试');
-    throw new Error(em || 'API 错误 (HTTP ' + resp.status + ')');
-  }
-
-  const data = await resp.json();
-  const content = data.choices?.[0]?.message?.content;
-  if (!content || !content.trim()) throw new Error('API 返回空内容');
-
-  const parsed = parseAIResponse(content.trim());
+  const content = await requestAIContent(basePrompt, userMsg, 0.7);
+  const parsed = parseAIResponse(content);
   return { questions: parsed.questions, outline: parsed.outline || null };
 }
 
@@ -3048,7 +3119,9 @@ function renderExam() {
   hd.appendChild(ebtn);
   document.getElementById('qText').textContent = q.question;
   const area = document.getElementById('answerArea'), sub = activeExam.isSubmitted[oi];
-  switch (q.type) {
+  if (['single', 'multiple', 'tf'].includes(q.type) && !hasObjectiveAnswer(q)) {
+    renderPendingAnswer(area, q, oi);
+  } else switch (q.type) {
     case 'single': renderSingle(area, q, oi, sub); break;
     case 'multiple': renderMulti(area, q, oi, sub); break;
     case 'short': renderShort(area, q, oi, sub); break;
@@ -3071,8 +3144,19 @@ function renderExam() {
 }
 
 // -- Single --
+function hasObjectiveAnswer(q) {
+  if (!q) return false;
+  const count = (q.options || []).length;
+  if (q.type === 'multiple') return Array.isArray(q.correctIndexes) && q.correctIndexes.length > 0 && q.correctIndexes.every(i => Number.isInteger(i) && i >= 0 && i < count);
+  return Number.isInteger(q.correctIndex) && q.correctIndex >= 0 && q.correctIndex < count;
+}
+
+function renderPendingAnswer(area, q, oi) {
+  area.innerHTML = '<div class="exp-box show"><div class="exp-label">答案待补充</div>原文未提供可确认的答案，补充后即可自动判分。</div><div class="options">' + (q.options || []).map((option, i) => '<div class="opt disabled"><span>' + (q.type === 'tf' ? '' : String.fromCharCode(65 + i) + '. ') + escH(option) + '</span></div>').join('') + '</div><button class="btn btn-s btn-sm" onclick="openEditModal(' + oi + ')">补充答案</button>' + expBox(q);
+}
+
 function renderSingle(area, q, oi, sub) {
-  const L = ['A','B','C','D'];
+  const L = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
   const mMode = memorizeMode;
   area.innerHTML = `<div class="options">${(q.options||[]).map((o,i) => {
     let c = 'opt';
@@ -3088,6 +3172,7 @@ function renderSingle(area, q, oi, sub) {
 function clickSingle(i) {
   const oi = origIdx();
   if (activeExam.isSubmitted[oi]) return;
+  if (!hasObjectiveAnswer(activeExam.questions.find(q => q.id === oi))) return;
   activeExam.userAnswers[oi] = i;
   activeExam.isSubmitted[oi] = true;
   activeExam.isCorrect[oi] = i === activeExam.questions.find(q => q.id === oi).correctIndex;
@@ -3123,7 +3208,7 @@ function toggleMemorizeMode() {
 
 // -- Multiple --
 function renderMulti(area, q, oi, sub) {
-  const L = ['A','B','C','D','E','F','G'];
+  const L = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
   const mMode = memorizeMode;
   const cs = new Set(q.correctIndexes||[]);
   const ua = activeExam.userAnswers[oi] || [];
@@ -3158,7 +3243,7 @@ function selectAll(oi) {
 }
 
 function togM(i) { const oi = origIdx(); if (activeExam.isSubmitted[oi]) return; if (!activeExam.userAnswers[oi]) activeExam.userAnswers[oi] = []; const a = activeExam.userAnswers[oi]; const p = a.indexOf(i); p >= 0 ? a.splice(p, 1) : a.push(i); renderExam(); }
-function subM(oi) { const q = activeExam.questions.find(q => q.id === oi); const ua = activeExam.userAnswers[oi] || []; const cs = new Set(q.correctIndexes||[]); activeExam.isSubmitted[oi] = true; activeExam.isCorrect[oi] = cs.size === ua.length && [...cs].every(c => ua.includes(c)); recordAnswer(activeExam.isCorrect[oi]); renderExam(); updateProgress(); checkFinish(); }
+function subM(oi) { const q = activeExam.questions.find(q => q.id === oi); if (!hasObjectiveAnswer(q) || activeExam.isSubmitted[oi]) return; const ua = activeExam.userAnswers[oi] || []; const cs = new Set(q.correctIndexes||[]); activeExam.isSubmitted[oi] = true; activeExam.isCorrect[oi] = cs.size === ua.length && [...cs].every(c => ua.includes(c)); recordAnswer(activeExam.isCorrect[oi]); renderExam(); updateProgress(); checkFinish(); }
 
 // -- Short --
 function renderShort(area, q, oi, sub) {
@@ -3213,6 +3298,7 @@ function renderTf(area, q, oi, sub) {
 function clickTf(i) {
   const oi = origIdx();
   if (activeExam.isSubmitted[oi]) return;
+  if (!hasObjectiveAnswer(activeExam.questions.find(q => q.id === oi))) return;
   activeExam.userAnswers[oi] = i;
   activeExam.isSubmitted[oi] = true;
   activeExam.isCorrect[oi] = i === activeExam.questions.find(q => q.id === oi).correctIndex;
@@ -3398,14 +3484,14 @@ function openEditModal(qid) {
 function renderEditTypeArea(q) {
   const area = document.getElementById('editTypeArea');
   const type = document.getElementById('editType') ? document.getElementById('editType').value : q.type;
-  const L = ['A','B','C','D','E','F','G'];
+  const L = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
   switch (type) {
     case 'single':
       const ci = q.correctIndex;
       area.innerHTML = `
         <div class="form-group"><label class="form-label">选项 & 正确答案</label></div>
-        ${(q.options||['','','','']).slice(0,4).map((o,i) => `
+        ${(q.options||['','','','']).map((o,i) => `
           <div class="opt-row">
             <span class="opt-letter">${L[i]}.</span>
             <input type="text" id="editOpt${i}" value="${escH(o)}" placeholder="选项${L[i]}">
@@ -3555,19 +3641,18 @@ function saveQuestionEdit() {
     correctIndex: undefined,
     correctIndexes: [],
     referenceAnswer: '',
-    explanation: newExplanation
+    explanation: newExplanation,
+    ...(oldQ.sourceId ? { sourceId: oldQ.sourceId, sourceLabel: oldQ.sourceLabel } : {})
   };
-
-  const L = ['A','B','C','D','E','F','G'];
 
   switch (newType) {
     case 'tf':
       newQ.options = ['正确', '错误'];
       const tfEl = document.querySelector('input[name="editTfCorrect"]:checked');
-      newQ.correctIndex = tfEl ? parseInt(tfEl.value) : 0;
+      newQ.correctIndex = tfEl ? parseInt(tfEl.value) : null;
       break;
     case 'single':
-      const optCount = 4;
+      const optCount = document.querySelectorAll('#editTypeArea input[id^="editOpt"]').length;
       for (let i = 0; i < optCount; i++) {
         const el = document.getElementById('editOpt'+i);
         newQ.options.push(el ? el.value.trim() : '');
@@ -3575,10 +3660,10 @@ function saveQuestionEdit() {
       // Filter empty options
       while (newQ.options.length > 2 && !newQ.options[newQ.options.length-1]) newQ.options.pop();
       const ciEl = document.querySelector('input[name="editCorrect"]:checked');
-      newQ.correctIndex = ciEl ? parseInt(ciEl.value) : 0;
+      newQ.correctIndex = ciEl ? parseInt(ciEl.value) : null;
       break;
     case 'multiple':
-      const mCount = 6;
+      const mCount = document.querySelectorAll('#editTypeArea input[id^="editOpt"]').length;
       for (let i = 0; i < mCount; i++) {
         const el = document.getElementById('editOpt'+i);
         const val = el ? el.value.trim() : '';
@@ -3594,6 +3679,8 @@ function saveQuestionEdit() {
       newQ.referenceAnswer = (document.getElementById('editReference')||{}).value || '';
       break;
   }
+
+  if (['single', 'multiple', 'tf'].includes(newType)) newQ.answerStatus = hasObjectiveAnswer(newQ) ? 'manual' : 'missing';
 
   const newPos = Math.max(1, Math.min(newMovePos, exam.questions.length)) - 1;
 
@@ -4535,8 +4622,7 @@ async function processReciteFileGetText(file) {
       mammothLoaded = true;
     }
     const buf = await file.arrayBuffer();
-    const result = await mammoth.extractRawText({ arrayBuffer: buf });
-    return result.value.trim();
+    return await readDocxText(buf);
   }
   if (ext === 'pdf') {
     if (!pdfjsLoaded) {
