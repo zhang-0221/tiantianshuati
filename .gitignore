@@ -1,0 +1,11 @@
+.claude/
+.claude/
+.DS_Store
+Thumbs.db
+*.docx
+
+.vercel
+.worktrees/
+node_modules/
+dist-desktop/
+src-tauri/target/
