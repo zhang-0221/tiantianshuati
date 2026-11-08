@@ -7,7 +7,7 @@ const output = resolve(root, 'dist-desktop');
 
 rmSync(output, { recursive: true, force: true });
 mkdirSync(output, { recursive: true });
-for (const entry of ['index.html', 'auth-config.js', 'assets']) {
+for (const entry of ['index.html', 'auth-config.js', 'question-import.js', 'assets']) {
   cpSync(resolve(root, entry), resolve(output, entry), { recursive: true });
 }
 
